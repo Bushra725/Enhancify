@@ -1,0 +1,9 @@
+This is a Flutter app ("Enhancify", AI photo enhancer). Rules:
+- Dart 3 / latest stable Flutter, Material 3, provider for state.
+- All user-tunable values live in lib/config/app_config.dart; AI models in lib/config/ai_models.dart.
+- Colors only from AppColors in lib/theme/app_theme.dart (red / maroon palette). Keep the dark UI.
+- Reuse widgets in lib/widgets/common.dart (PillButton, ProBadge, DarkCard, showSnack).
+- Every async UI flow must check `mounted` / `context.mounted` after awaits.
+- Free-tier limits go through AppState.remaining / incrementUsage and ensureQuota().
+- Never put the Replicate token in code; use --dart-define or the server/ proxy.
+- Run `flutter analyze` and `flutter test` after changes.
