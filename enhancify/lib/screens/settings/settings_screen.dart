@@ -190,7 +190,6 @@ class SettingsScreen extends StatelessWidget {
         children: [
           _ProCard(isPro: state.isPro, tier: state.tier),
           const _AppearanceCard(),
-          const _AiKeyCard(),
           _Group('AI Photos', [
             _Item(Icons.delete_sweep_outlined, 'Delete AI Profile',
                 trailing: Icons.refresh, onTap: () => _deleteProfile(context)),
@@ -309,85 +308,6 @@ class _AppearanceCard extends StatelessWidget {
       ),
     );
     if (code != null) await state.setLanguage(code);
-  }
-}
-
-class _AiKeyCard extends StatefulWidget {
-  const _AiKeyCard();
-
-  @override
-  State<_AiKeyCard> createState() => _AiKeyCardState();
-}
-
-class _AiKeyCardState extends State<_AiKeyCard> {
-  late final TextEditingController _key;
-  bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _key = TextEditingController(text: context.read<AppState>().openAiKey);
-  }
-
-  @override
-  void dispose() {
-    _key.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    await context.read<AppState>().setOpenAiKey(_key.text);
-    if (!mounted) return;
-    setState(() => _saving = false);
-    showSnack(context, context.tr('keySaved'));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final tr = context.tr;
-    final connected = context.watch<AppState>().openAiKey.isNotEmpty ||
-        AppConfig.openAiApiKey.isNotEmpty;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: DarkCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(tr('aiConnection'),
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 6),
-            Text(
-              connected ? tr('connected') : tr('notConnected'),
-              style: TextStyle(color: context.palette.textSecondary, fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _key,
-              obscureText: true,
-              autocorrect: false,
-              decoration: InputDecoration(
-                labelText: tr('apiKey'),
-                hintText: tr('apiKeyHint'),
-                filled: true,
-                fillColor: context.palette.surfaceHigh,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            PillButton(
-              label: tr('saveKey'),
-              kind: ButtonStyleKind.brand,
-              loading: _saving,
-              onPressed: _save,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

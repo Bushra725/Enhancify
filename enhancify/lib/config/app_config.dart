@@ -41,7 +41,7 @@ class AppConfig {
   static const String replicateToken =
       String.fromEnvironment('REPLICATE_API_TOKEN', defaultValue: '');
 
-  /// Optional build-time OpenAI key. A key saved in Settings overrides this.
+  /// Build-time OpenAI key. End users never enter this.
   static const String openAiApiKey =
       String.fromEnvironment('OPENAI_API_KEY', defaultValue: '');
 

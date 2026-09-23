@@ -121,7 +121,6 @@ class _ResultScreenState extends State<ResultScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ai = context.read<AiService>();
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -140,17 +139,6 @@ class _ResultScreenState extends State<ResultScreen> {
       ),
       body: Column(
         children: [
-          if (ai.demoMode)
-            Container(
-              width: double.infinity,
-              color: AppColors.red.withValues(alpha: 0.12),
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-              child: Text(
-                context.tr('addKeyBanner'),
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: context.palette.textPrimary),
-              ),
-            ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(12),

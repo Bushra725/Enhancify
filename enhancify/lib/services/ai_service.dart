@@ -162,8 +162,7 @@ class AiService {
       );
     }
     if (!hasReplicate) {
-      throw AiException(
-          'Add an OpenAI API key in Settings to generate a real result.');
+      throw AiException('This photo could not be enhanced right now.');
     }
     switch (variant) {
       case EnhanceVariant.base:
@@ -212,8 +211,7 @@ class AiService {
       );
     }
     if (!hasReplicate) {
-      throw AiException(
-          'Add an OpenAI API key in Settings to generate a real result.');
+      throw AiException('This photo could not be enhanced right now.');
     }
     return _runImage(AiModels.imageEdit, source,
         input: {'prompt': prompt}, onStatus: onStatus);
@@ -229,8 +227,7 @@ class AiService {
   }) async {
     if (prompts.isEmpty) return [];
     if (!hasOpenAi && !hasReplicate) {
-      throw AiException(
-          'Add an OpenAI API key in Settings to generate a real result.');
+      throw AiException('These photos could not be created right now.');
     }
     final slots = List<File?>.filled(prompts.length, null);
     var done = 0;

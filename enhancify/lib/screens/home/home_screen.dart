@@ -179,7 +179,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final ai = context.read<AiService>();
     final tr = context.tr;
     final palette = context.palette;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
@@ -211,19 +210,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            if (ai.demoMode)
-              Container(
-                margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.red.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  tr('addKeyBanner'),
-                  style: TextStyle(fontSize: 12, color: palette.textPrimary),
-                ),
-              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
               child: Text(tr('enhance'),
