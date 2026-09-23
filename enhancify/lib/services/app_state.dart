@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
@@ -79,6 +79,9 @@ class AppState extends ChangeNotifier {
   static const _kAiHistory = 'ai_history';
   static const _kEnhancer = 'enhancer_prefs';
   static const _kGenderTip = 'gender_tip_seen';
+  static const _kTheme = 'theme_mode';
+  static const _kLang = 'language_code';
+  static const _kOpenAi = 'openai_api_key';
 
   bool onboarded = false;
   String? discoverSource;
@@ -91,6 +94,9 @@ class AppState extends ChangeNotifier {
   List<String> selfies = [];
   List<String> aiHistory = [];
   bool genderTipSeen = false;
+  ThemeMode themeMode = ThemeMode.light;
+  String languageCode = 'en';
+  String openAiKey = '';
   Map<String, int> _usage = {};
 
   bool get isPro => tier == SubscriptionTier.pro;
@@ -114,6 +120,10 @@ class AppState extends ChangeNotifier {
     selfies = _prefs.getStringList(_kSelfies) ?? [];
     aiHistory = _prefs.getStringList(_kAiHistory) ?? [];
     genderTipSeen = _prefs.getBool(_kGenderTip) ?? false;
+    themeMode =
+        _prefs.getString(_kTheme) == 'dark' ? ThemeMode.dark : ThemeMode.light;
+    languageCode = _prefs.getString(_kLang) ?? 'en';
+    openAiKey = _prefs.getString(_kOpenAi) ?? '';
     final ep = _prefs.getString(_kEnhancer);
     if (ep != null) {
       try {
@@ -153,6 +163,28 @@ class AppState extends ChangeNotifier {
   Future<void> completeOnboarding() async {
     onboarded = true;
     await _prefs.setBool(_kOnboarded, true);
+    notifyListeners();
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    themeMode = mode;
+    await _prefs.setString(_kTheme, mode == ThemeMode.dark ? 'dark' : 'light');
+    notifyListeners();
+  }
+
+  Future<void> setLanguage(String code) async {
+    languageCode = code;
+    await _prefs.setString(_kLang, code);
+    notifyListeners();
+  }
+
+  Future<void> setOpenAiKey(String key) async {
+    openAiKey = key.trim();
+    if (openAiKey.isEmpty) {
+      await _prefs.remove(_kOpenAi);
+    } else {
+      await _prefs.setString(_kOpenAi, openAiKey);
+    }
     notifyListeners();
   }
 

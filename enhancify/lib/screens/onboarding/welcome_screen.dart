@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_config.dart';
+import '../../l10n/l10n.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/illustrations.dart';
@@ -82,7 +83,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 ),
                 const SizedBox(height: 28),
                 PillButton(
-                  label: 'Get Started',
+                  label: context.tr('getStarted'),
                   loading: _loading,
                   onPressed: _start,
                   trailing: const Icon(Icons.arrow_forward_ios_rounded),

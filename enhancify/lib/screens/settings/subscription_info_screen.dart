@@ -59,8 +59,8 @@ class _SubscriptionInfoScreenState extends State<SubscriptionInfoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Current plan',
-                    style: TextStyle(color: AppColors.textSecondary)),
+                Text('Current plan',
+                    style: TextStyle(color: context.palette.textSecondary)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
@@ -106,11 +106,11 @@ class _SubscriptionInfoScreenState extends State<SubscriptionInfoScreen> {
             onPressed: _manage,
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Subscriptions renew automatically unless cancelled at least 24 '
             'hours before the end of the current period. Manage or cancel '
             'anytime in your store account settings.',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            style: TextStyle(color: context.palette.textMuted, fontSize: 12),
           ),
         ],
       ),
@@ -122,7 +122,7 @@ class _SubscriptionInfoScreenState extends State<SubscriptionInfoScreen> {
         child: Row(
           children: [
             Expanded(child: Text(a)),
-            Text(b, style: const TextStyle(color: AppColors.textSecondary)),
+            Text(b, style: TextStyle(color: context.palette.textSecondary)),
           ],
         ),
       );

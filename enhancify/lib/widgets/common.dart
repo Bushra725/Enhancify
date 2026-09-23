@@ -39,10 +39,16 @@ class PillButton extends StatelessWidget {
       ButtonStyleKind.brand => (Colors.white, null, AppColors.brandGradient, null),
       ButtonStyleKind.dark => (Colors.white, Colors.black, null, null),
       ButtonStyleKind.outline => (
-          Colors.white,
+          Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : AppColors.maroon,
           Colors.transparent,
           null,
-          Border.all(color: AppColors.border, width: 1.4)
+          Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.border
+                  : const Color(0xFFE3D4D8),
+              width: 1.4)
         ),
     };
     final text = Text(
@@ -206,7 +212,7 @@ class DarkCard extends StatelessWidget {
       width: double.infinity,
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.palette.surface,
         borderRadius: BorderRadius.circular(18),
       ),
       child: child,

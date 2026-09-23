@@ -44,7 +44,7 @@ Future<bool> ensureQuota(
               'You used all your free $what for today. Watch a short ad to '
               'unlock one more, or go Pro for unlimited access.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.palette.textSecondary),
             ),
             const SizedBox(height: 20),
             PillButton(

@@ -73,12 +73,12 @@ class PresetDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
               child: Column(
                 children: [
-                  const Text('PRESET',
+                  Text('PRESET',
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.2,
-                          color: AppColors.textSecondary)),
+                          color: context.palette.textSecondary)),
                   const SizedBox(height: 8),
                   const Text(
                     "We'll use the style and composition of this preset to "
@@ -95,11 +95,11 @@ class PresetDetailScreen extends StatelessWidget {
                     onPressed: () => generateSingle(context, shot),
                   ),
                   if (!state.isPaid)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
                       child: Text('Free with a short ad',
                           style: TextStyle(
-                              color: AppColors.textMuted, fontSize: 12)),
+                              color: context.palette.textMuted, fontSize: 12)),
                     ),
                 ],
               ),

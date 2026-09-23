@@ -153,7 +153,7 @@ class _GalleryGridState extends State<GalleryGrid> with WidgetsBindingObserver {
                 widget.type == RequestType.video
                     ? 'No videos found'
                     : 'No photos found',
-                style: const TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: context.palette.textSecondary),
               ),
       );
     }
@@ -178,7 +178,7 @@ class _GalleryGridState extends State<GalleryGrid> with WidgetsBindingObserver {
                 await _reload();
               },
               child: Container(
-                color: AppColors.surface,
+                color: context.palette.surface,
                 child: const Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -197,16 +197,16 @@ class _GalleryGridState extends State<GalleryGrid> with WidgetsBindingObserver {
               fit: StackFit.expand,
               children: [
                 ColoredBox(
-                  color: AppColors.surface,
+                  color: context.palette.surface,
                   child: AssetEntityImage(
                     a,
                     isOriginal: false,
                     thumbnailSize: const ThumbnailSize.square(300),
                     thumbnailFormat: ThumbnailFormat.jpeg,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
+                    errorBuilder: (ctx, __, ___) => Icon(
                         Icons.broken_image_outlined,
-                        color: AppColors.textMuted),
+                        color: ctx.palette.textMuted),
                   ),
                 ),
                 if (a.type == AssetType.video)
@@ -247,13 +247,13 @@ class _GalleryGridState extends State<GalleryGrid> with WidgetsBindingObserver {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.info_outline, color: AppColors.textSecondary),
+            Icon(Icons.info_outline, color: context.palette.textSecondary),
             const SizedBox(height: 12),
             Text(
               'To enhance, ${AppConfig.appName} needs access to your '
               '${widget.type == RequestType.video ? 'videos' : 'photos'}.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.palette.textSecondary),
             ),
             const SizedBox(height: 18),
             SizedBox(

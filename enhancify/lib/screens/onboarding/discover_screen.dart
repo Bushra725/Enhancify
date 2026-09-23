@@ -107,7 +107,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                         decoration: InputDecoration(
                           hintText: 'Write your answer here...',
                           filled: true,
-                          fillColor: AppColors.surface,
+                          fillColor: context.palette.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(18),
                             borderSide: BorderSide.none,

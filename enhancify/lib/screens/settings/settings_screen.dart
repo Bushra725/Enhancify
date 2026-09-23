@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_config.dart';
+import '../../l10n/l10n.dart';
 import '../../services/app_state.dart';
 import '../../services/media_service.dart';
 import '../../theme/app_theme.dart';
@@ -44,7 +45,7 @@ class SettingsScreen extends StatelessWidget {
       final setUp = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: AppColors.surface,
+          backgroundColor: ctx.palette.surface,
           title: const Text('No AI profile yet'),
           content: const Text(
               'Your AI profile is created when you add selfies for AI Photos.'),
@@ -67,7 +68,7 @@ class SettingsScreen extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: ctx.palette.surface,
         title: const Text('Delete AI Profile?'),
         content: const Text(
             'This removes your selfies and all generated AI photos from this '
@@ -100,7 +101,7 @@ class SettingsScreen extends StatelessWidget {
     final code = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: ctx.palette.surface,
         title: const Text('Use Redeem Code'),
         content: TextField(
           controller: controller,
@@ -142,7 +143,7 @@ class SettingsScreen extends StatelessWidget {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: ctx.palette.surface,
         title: const Text('Photos Permissions'),
         content: Text('Current access: $label\n\n'
             '${AppConfig.appName} only reads the photos you choose to enhance.'),
@@ -182,12 +183,14 @@ class SettingsScreen extends StatelessWidget {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('Settings'),
+        title: Text(context.tr('settings')),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(14, 4, 14, 30),
         children: [
           _ProCard(isPro: state.isPro, tier: state.tier),
+          const _AppearanceCard(),
+          const _AiKeyCard(),
           _Group('AI Photos', [
             _Item(Icons.delete_sweep_outlined, 'Delete AI Profile',
                 trailing: Icons.refresh, onTap: () => _deleteProfile(context)),
@@ -243,11 +246,146 @@ class SettingsScreen extends StatelessWidget {
                     applicationName: AppConfig.appName)),
           ]),
           const SizedBox(height: 16),
-          const Center(
+          Center(
             child: Text('${AppConfig.appName} v1.0.0',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                style: TextStyle(color: context.palette.textMuted, fontSize: 12)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AppearanceCard extends StatelessWidget {
+  const _AppearanceCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final tr = context.tr;
+    return _Group(tr('appearance'), [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(tr('theme'),
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            SegmentedButton<ThemeMode>(
+              segments: [
+                ButtonSegment(value: ThemeMode.light, label: Text(tr('light'))),
+                ButtonSegment(value: ThemeMode.dark, label: Text(tr('dark'))),
+              ],
+              selected: {state.themeMode},
+              onSelectionChanged: (s) => state.setThemeMode(s.first),
+            ),
+          ],
+        ),
+      ),
+      _Item(Icons.language, tr('language'),
+          trailing: Icons.chevron_right_rounded, onTap: () => _pickLanguage(context)),
+    ]);
+  }
+
+  Future<void> _pickLanguage(BuildContext context) async {
+    final state = context.read<AppState>();
+    final code = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final c in Tr.codes)
+              ListTile(
+                title: Text(Tr.names[c] ?? c),
+                trailing: state.languageCode == c
+                    ? const Icon(Icons.check, color: AppColors.red)
+                    : null,
+                onTap: () => Navigator.pop(ctx, c),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (code != null) await state.setLanguage(code);
+  }
+}
+
+class _AiKeyCard extends StatefulWidget {
+  const _AiKeyCard();
+
+  @override
+  State<_AiKeyCard> createState() => _AiKeyCardState();
+}
+
+class _AiKeyCardState extends State<_AiKeyCard> {
+  late final TextEditingController _key;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _key = TextEditingController(text: context.read<AppState>().openAiKey);
+  }
+
+  @override
+  void dispose() {
+    _key.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    await context.read<AppState>().setOpenAiKey(_key.text);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    showSnack(context, context.tr('keySaved'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tr = context.tr;
+    final connected = context.watch<AppState>().openAiKey.isNotEmpty ||
+        AppConfig.openAiApiKey.isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DarkCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(tr('aiConnection'),
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            Text(
+              connected ? tr('connected') : tr('notConnected'),
+              style: TextStyle(color: context.palette.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _key,
+              obscureText: true,
+              autocorrect: false,
+              decoration: InputDecoration(
+                labelText: tr('apiKey'),
+                hintText: tr('apiKeyHint'),
+                filled: true,
+                fillColor: context.palette.surfaceHigh,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            PillButton(
+              label: tr('saveKey'),
+              kind: ButtonStyleKind.brand,
+              loading: _saving,
+              onPressed: _save,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -266,6 +404,7 @@ class _ProCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: context.palette.border),
       ),
       child: Row(
         children: [
@@ -333,7 +472,7 @@ class _ProCard extends StatelessWidget {
 class _Group extends StatelessWidget {
   const _Group(this.title, this.items);
   final String title;
-  final List<_Item> items;
+  final List<Widget> items;
 
   @override
   Widget build(BuildContext context) {
@@ -378,13 +517,13 @@ class _Item extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      leading: Icon(icon, color: AppColors.textSecondary),
+      leading: Icon(icon, color: context.palette.textSecondary),
       title: Text(label, style: const TextStyle(fontSize: 15)),
       trailing: Icon(
         trailing ??
             (external ? Icons.open_in_new_rounded : Icons.chevron_right_rounded),
         size: 20,
-        color: AppColors.textSecondary,
+        color: context.palette.textSecondary,
       ),
     );
   }

@@ -100,7 +100,7 @@ class _PickPresetScreenState extends State<PickPresetScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceHigh,
+                  color: context.palette.surfaceHigh,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -136,7 +136,7 @@ class _PickPresetScreenState extends State<PickPresetScreen> {
                           shape: const StadiumBorder(),
                           side: BorderSide.none,
                           selectedColor: Colors.white,
-                          backgroundColor: AppColors.surface,
+                          backgroundColor: context.palette.surface,
                           label: Text(
                             '${p.title} ${p.emoji}',
                             style: TextStyle(
@@ -243,10 +243,10 @@ class _PackSection extends StatelessWidget {
             Row(
               children: [
                 Text('${pack.shots.length} PHOTOS',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textSecondary)),
+                        color: context.palette.textSecondary)),
                 if (pack.trending) ...[
                   const SizedBox(width: 8),
                   Container(

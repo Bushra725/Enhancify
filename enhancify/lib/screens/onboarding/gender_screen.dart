@@ -28,7 +28,7 @@ class GenderScreen extends StatelessWidget {
     Widget option(String emoji, String label, Gender g) => Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Material(
-            color: AppColors.surface,
+            color: context.palette.surface,
             borderRadius: BorderRadius.circular(18),
             child: InkWell(
               borderRadius: BorderRadius.circular(18),
@@ -45,7 +45,7 @@ class GenderScreen extends StatelessWidget {
                           style: const TextStyle(
                               fontSize: 16, fontWeight: FontWeight.w700)),
                     ),
-                    const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                    Icon(Icons.chevron_right, color: context.palette.textSecondary),
                   ],
                 ),
               ),
@@ -61,8 +61,8 @@ class GenderScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              const Text('Welcome to ${AppConfig.appName}!',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+              Text('Welcome to ${AppConfig.appName}!',
+                  style: TextStyle(color: context.palette.textSecondary, fontSize: 15)),
               const SizedBox(height: 6),
               const Text("What's your gender?",
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
@@ -71,11 +71,11 @@ class GenderScreen extends StatelessWidget {
               option('👨', 'Male', Gender.male),
               option('⭐', 'Other', Gender.other),
               const Spacer(),
-              const Center(
+              Center(
                 child: Text(
                   'We will only use this information to personalize your experience.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                  style: TextStyle(color: context.palette.textMuted, fontSize: 12),
                 ),
               ),
               const SizedBox(height: 16),

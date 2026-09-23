@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path/path.dart' as p;
@@ -12,6 +10,7 @@ import '../config/ai_models.dart';
 import '../config/app_config.dart';
 import 'app_state.dart';
 import 'replicate_service.dart';
+import 'openai_service.dart';
 
 enum EnhanceVariant { base, ultra, natural }
 
@@ -34,8 +33,22 @@ class AiService {
 
   final ReplicateService _replicate;
   final _rand = Random();
+  String Function()? _readOpenAiKey;
 
-  bool get demoMode => AppConfig.isDemoMode;
+  void attachKey(String Function() read) => _readOpenAiKey = read;
+
+  String get openAiKey {
+    final saved = _readOpenAiKey?.call() ?? '';
+    if (saved.isNotEmpty) return saved;
+    return AppConfig.openAiApiKey;
+  }
+
+  bool get hasOpenAi => openAiKey.isNotEmpty;
+  bool get hasReplicate =>
+      AppConfig.backendUrl.isNotEmpty || AppConfig.replicateToken.isNotEmpty;
+
+  /// No real backend is configured.
+  bool get demoMode => !hasOpenAi && !hasReplicate;
 
   Future<Directory> _workDir() async {
     final base = await getApplicationDocumentsDirectory();
@@ -100,6 +113,39 @@ class AiService {
     return _replicate.download(out, await _newFile(_extFromUrl(out, 'png')));
   }
 
+  Future<File> _openAiEdit(
+    File source,
+    String prompt, {
+    bool highDetail = false,
+    StatusCallback? onStatus,
+  }) async {
+    onStatus?.call('Uploading image...');
+    final prepared = await prepareImage(source);
+    onStatus?.call('Creating your result...');
+    final bytes = await OpenAiService(openAiKey).edit(
+      image: prepared,
+      prompt: prompt,
+      highDetail: highDetail,
+    );
+    final out = await _newFile('jpg');
+    await out.writeAsBytes(bytes, flush: true);
+    return out;
+  }
+
+  String _enhancePrompt(EnhanceVariant variant, EnhancerPrefs prefs) {
+    final strength = prefs.faceFidelity < 0.4
+        ? 'Apply a strong, crisp facial restoration.'
+        : 'Keep the face close to the original.';
+    return switch (variant) {
+      EnhanceVariant.base =>
+        'Restore this exact photograph. Sharpen detail, balance the light, and improve color. $strength Keep the same person, expression, pose, clothes, framing, and background. Photorealistic. Do not invent a new scene.',
+      EnhanceVariant.natural =>
+        'Make a very small natural correction only: slightly cleaner exposure and white balance. The photo must stay almost identical, including the same person, pose, clothes, and background.',
+      EnhanceVariant.ultra =>
+        'Rebuild this photograph in ultra high definition. Recover fine detail in eyes, hair, skin texture, fabric, and the background. Keep the same identity, expression, pose, clothes, and framing. Photorealistic, not illustrated.',
+    };
+  }
+
   // ------------------------------------------------------------ enhance
   Future<File> enhancePhoto(
     File source, {
@@ -107,19 +153,17 @@ class AiService {
     required EnhancerPrefs prefs,
     StatusCallback? onStatus,
   }) async {
-    if (demoMode) {
-      return switch (variant) {
-        EnhanceVariant.base => _demo(
-            source,
-            _DemoLook.enhance,
-            onStatus: onStatus,
-            scale: prefs.upscale >= 4 ? 2 : 1,
-          ),
-        EnhanceVariant.natural =>
-          _demo(source, _DemoLook.natural, onStatus: onStatus),
-        EnhanceVariant.ultra =>
-          _demo(source, _DemoLook.vivid, onStatus: onStatus, scale: 2),
-      };
+    if (hasOpenAi) {
+      return _openAiEdit(
+        source,
+        _enhancePrompt(variant, prefs),
+        highDetail: variant == EnhanceVariant.ultra || prefs.upscale >= 4,
+        onStatus: onStatus,
+      );
+    }
+    if (!hasReplicate) {
+      throw AiException(
+          'Add an OpenAI API key in Settings to generate a real result.');
     }
     switch (variant) {
       case EnhanceVariant.base:
@@ -160,8 +204,16 @@ class AiService {
     StatusCallback? onStatus,
     String demoLook = 'warm',
   }) async {
-    if (demoMode) {
-      return _demo(source, _DemoLook.fromName(demoLook), onStatus: onStatus);
+    if (hasOpenAi) {
+      return _openAiEdit(
+        source,
+        '$prompt Style: $demoLook. Apply this change to the whole photo. Keep the same person\'s identity.',
+        onStatus: onStatus,
+      );
+    }
+    if (!hasReplicate) {
+      throw AiException(
+          'Add an OpenAI API key in Settings to generate a real result.');
     }
     return _runImage(AiModels.imageEdit, source,
         input: {'prompt': prompt}, onStatus: onStatus);
@@ -176,15 +228,45 @@ class AiService {
     void Function(int done, int total)? onProgress,
   }) async {
     if (prompts.isEmpty) return [];
+    if (!hasOpenAi && !hasReplicate) {
+      throw AiException(
+          'Add an OpenAI API key in Settings to generate a real result.');
+    }
     final slots = List<File?>.filled(prompts.length, null);
     var done = 0;
-    if (demoMode) {
-      const looks = _DemoLook.values;
-      for (var i = 0; i < prompts.length; i++) {
-        slots[i] = await _demo(selfie, looks[i % looks.length], onStatus: onStatus);
-        onProgress?.call(++done, prompts.length);
+    if (hasOpenAi) {
+      onStatus?.call('Creating your AI photos...');
+      final prepared = await prepareImage(selfie);
+      final errors = <Object>[];
+      Future<void> one(int index) async {
+        try {
+          final bytes = await OpenAiService(openAiKey).edit(
+            image: prepared,
+            prompt: prompts[index],
+            highDetail: true,
+          );
+          final out = await _newFile('jpg');
+          await out.writeAsBytes(bytes, flush: true);
+          slots[index] = out;
+        } catch (e) {
+          errors.add(e);
+        } finally {
+          onProgress?.call(++done, prompts.length);
+        }
       }
-      return slots.whereType<File>().toList();
+
+      const batch = 2;
+      for (var i = 0; i < prompts.length; i += batch) {
+        final end = min(i + batch, prompts.length);
+        await Future.wait([for (var j = i; j < end; j++) one(j)]);
+      }
+      final results = slots.whereType<File>().toList();
+      if (results.isEmpty) {
+        throw errors.isNotEmpty
+            ? errors.first
+            : AiException('Could not generate photos.');
+      }
+      return results;
     }
     onStatus?.call('Uploading your selfie...');
     final url = await _replicate.uploadFile(await prepareImage(selfie));
@@ -223,15 +305,9 @@ class AiService {
 
   // ------------------------------------------------------------- video
   Future<File> enhanceVideo(File source, {StatusCallback? onStatus}) async {
-    if (demoMode) {
-      onStatus?.call('Uploading video...');
-      await Future<void>.delayed(const Duration(seconds: 2));
-      onStatus?.call('Enhancing video (demo)...');
-      await Future<void>.delayed(const Duration(seconds: 2));
-      var ext = p.extension(source.path).replaceFirst('.', '').toLowerCase();
-      if (ext.isEmpty || ext.length > 4) ext = 'mp4';
-      final out = await _newFile(ext);
-      return source.copy(out.path);
+    if (!hasReplicate) {
+      throw AiException(
+          'Video enhance needs a Replicate token. Photos, filters, and AI photos use your OpenAI key.');
     }
     onStatus?.call('Uploading video...');
     final url = await _replicate.uploadFile(source);
@@ -240,130 +316,5 @@ class AiService {
     final o = outs.first;
     onStatus?.call('Downloading...');
     return _replicate.download(o, await _newFile(_extFromUrl(o, 'mp4')));
-  }
-
-  // -------------------------------------------------------------- demo
-  /// Local stand-in used when no AI backend is configured, so the whole app
-  /// can be tried end-to-end. Applies a colour/contrast look with dart:ui.
-  Future<File> _demo(
-    File src,
-    _DemoLook look, {
-    StatusCallback? onStatus,
-    int scale = 1,
-  }) async {
-    onStatus?.call('Uploading image...');
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    onStatus?.call('Enhancing (demo mode)...');
-    final prepared = await prepareImage(src, maxSide: 1600);
-    final bytes = await prepared.readAsBytes();
-    if (bytes.isEmpty) {
-      throw AiException('Could not read this photo. Try another one.');
-    }
-    late final ui.Image img;
-    try {
-      img = await _decode(bytes, maxSide: 1600);
-    } catch (_) {
-      throw AiException('Could not read this photo. Try another one.');
-    }
-    final factor = scale < 1 ? 1 : scale;
-    final outW = img.width * factor;
-    final outH = img.height * factor;
-    final recorder = ui.PictureRecorder();
-    final canvas = ui.Canvas(recorder);
-    final paint = ui.Paint()
-      ..filterQuality = ui.FilterQuality.high
-      ..colorFilter = ui.ColorFilter.matrix(look.matrix);
-    canvas.drawImageRect(
-      img,
-      ui.Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
-      ui.Rect.fromLTWH(0, 0, outW.toDouble(), outH.toDouble()),
-      paint,
-    );
-    final picture = recorder.endRecording();
-    final outImg = await picture.toImage(outW, outH);
-    final data = await outImg.toByteData(format: ui.ImageByteFormat.png);
-    img.dispose();
-    outImg.dispose();
-    if (data == null) throw AiException('Could not process image.');
-    final out = await _newFile('png');
-    await out.writeAsBytes(data.buffer.asUint8List(), flush: true);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    return out;
-  }
-
-  Future<ui.Image> _decode(Uint8List bytes, {required int maxSide}) async {
-    final codec = await ui.instantiateImageCodec(bytes);
-    final frame = await codec.getNextFrame();
-    codec.dispose();
-    final img = frame.image;
-    final longest = max(img.width, img.height);
-    if (longest <= maxSide) return img;
-    final targetW = img.width >= img.height ? maxSide : null;
-    final targetH = img.height > img.width ? maxSide : null;
-    img.dispose();
-    final scaled = await ui.instantiateImageCodec(
-      bytes,
-      targetWidth: targetW,
-      targetHeight: targetH,
-    );
-    final scaledFrame = await scaled.getNextFrame();
-    scaled.dispose();
-    return scaledFrame.image;
-  }
-}
-
-enum _DemoLook {
-  enhance,
-  natural,
-  warm,
-  cool,
-  mono,
-  vivid;
-
-  static _DemoLook fromName(String n) =>
-      _DemoLook.values.firstWhere((l) => l.name == n, orElse: () => warm);
-
-  List<double> get matrix {
-    final m = switch (this) {
-        // contrast 1.15 + saturation 1.2 + slight brightness
-        _DemoLook.enhance => <double>[
-            1.25, -0.08, -0.02, 0, -14, //
-            -0.04, 1.22, -0.03, 0, -14, //
-            -0.04, -0.08, 1.27, 0, -14, //
-            0, 0, 0, 1, 0,
-          ],
-        _DemoLook.natural => <double>[
-            1.04, 0, 0, 0, 6, //
-            0, 1.04, 0, 0, 6, //
-            0, 0, 1.04, 0, 6, //
-            0, 0, 0, 1, 0,
-          ],
-        _DemoLook.warm => <double>[
-            1.15, 0.05, 0, 0, 10, //
-            0, 1.05, 0, 0, 4, //
-            0, 0, 0.85, 0, -6, //
-            0, 0, 0, 1, 0,
-          ],
-        _DemoLook.cool => <double>[
-            0.9, 0, 0, 0, -4, //
-            0, 1.0, 0.05, 0, 2, //
-            0, 0.05, 1.2, 0, 12, //
-            0, 0, 0, 1, 0,
-          ],
-        _DemoLook.mono => <double>[
-            0.33, 0.59, 0.11, 0, 0, //
-            0.33, 0.59, 0.11, 0, 0, //
-            0.33, 0.59, 0.11, 0, 0, //
-            0, 0, 0, 1, 0,
-          ],
-        _DemoLook.vivid => <double>[
-            1.5, -0.25, -0.25, 0, -10, //
-            -0.25, 1.5, -0.25, 0, -10, //
-            -0.25, -0.25, 1.5, 0, -10, //
-            0, 0, 0, 1, 0,
-          ],
-      };
-    assert(m.length == 20, 'Color matrix must have 20 values');
-    return m;
   }
 }

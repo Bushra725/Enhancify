@@ -37,13 +37,18 @@ class AppConfig {
   static const String backendAppKey =
       String.fromEnvironment('BACKEND_APP_KEY', defaultValue: '');
 
-  /// Direct Replicate token. For development only.
+  /// Direct Replicate token. Used for video enhance.
   static const String replicateToken =
       String.fromEnvironment('REPLICATE_API_TOKEN', defaultValue: '');
 
-  /// When neither a backend nor a token is configured the app runs in demo
-  /// mode: every screen works but "AI" results are simulated locally.
-  static bool get isDemoMode => backendUrl.isEmpty && replicateToken.isEmpty;
+  /// Optional build-time OpenAI key. A key saved in Settings overrides this.
+  static const String openAiApiKey =
+      String.fromEnvironment('OPENAI_API_KEY', defaultValue: '');
+
+  /// True only when no OpenAI key was baked in and no Replicate backend exists.
+  /// The live key from Settings is checked separately by [AiService].
+  static bool get isDemoMode =>
+      openAiApiKey.isEmpty && backendUrl.isEmpty && replicateToken.isEmpty;
 
   // ------------------------------------------------------- free-tier limits
   static const int freeEnhancementsPerDay = 3;

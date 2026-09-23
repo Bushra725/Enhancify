@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../config/app_config.dart';
 import '../../data/catalog.dart';
+import '../../l10n/l10n.dart';
 import '../../services/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
@@ -27,7 +28,7 @@ class AiFiltersScreen extends StatelessWidget {
     final state = context.watch<AppState>();
     final left = state.remaining(UsageKeys.filter, AppConfig.freeFiltersPerDay);
     return Scaffold(
-      appBar: AppBar(title: const Text('AI Filters')),
+      appBar: AppBar(title: Text(context.tr('aiFilters'))),
       body: Column(
         children: [
           if (left >= 0)

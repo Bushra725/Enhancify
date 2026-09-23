@@ -116,11 +116,11 @@ class _SelfiesScreenState extends State<SelfiesScreen> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        const Text(
+                        Text(
                           'Add up to 8 clear selfies: different angles, good '
                           'light, only you in the photo. Your best selfie goes first.',
                           style: TextStyle(
-                              color: AppColors.textSecondary, fontSize: 13),
+                              color: context.palette.textSecondary, fontSize: 13),
                         ),
                         const SizedBox(height: 12),
                         GridView.builder(
@@ -177,14 +177,14 @@ class _SelfiesScreenState extends State<SelfiesScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'By tapping "Continue", you declare that you have all necessary '
                     'rights and permissions to share these images with us and that '
                     'you will use the photos generated lawfully.\n\n'
                     'If you upload images that include minors, by tapping "Continue" '
                     'you declare that you have parental responsibility for them and '
                     'the necessary rights to share the images.',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                    style: TextStyle(color: context.palette.textMuted, fontSize: 12),
                   ),
                 ],
               ),

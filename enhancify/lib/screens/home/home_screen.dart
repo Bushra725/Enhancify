@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../config/app_config.dart';
 import '../../data/catalog.dart';
+import '../../l10n/l10n.dart';
 import '../../services/ai_service.dart';
 import '../../services/app_state.dart';
 import '../../services/media_service.dart';
@@ -135,33 +136,33 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                header('Enhance'),
+                header(context.tr('enhance')),
                 Row(children: [
-                  tool(Icons.auto_awesome, 'Enhance Photos',
+                  tool(Icons.auto_awesome, context.tr('enhancePhotos'),
                       () => setState(() => _videos = false)),
                   const SizedBox(width: 10),
-                  tool(Icons.videocam_outlined, 'Enhance Videos',
+                  tool(Icons.videocam_outlined, context.tr('enhanceVideos'),
                       () => setState(() => _videos = true),
                       pro: true),
                 ]),
                 const SizedBox(height: 8),
-                header('AI Generation'),
+                header(context.tr('aiGeneration')),
                 Row(children: [
-                  tool(Icons.face_retouching_natural, 'AI Photos', _openAiPhotos),
+                  tool(Icons.face_retouching_natural, context.tr('aiPhotos'), _openAiPhotos),
                   const SizedBox(width: 10),
-                  tool(Icons.filter_vintage_outlined, 'AI Filters', _openFilters),
+                  tool(Icons.filter_vintage_outlined, context.tr('aiFilters'), _openFilters),
                 ]),
                 const SizedBox(height: 8),
-                header('Restore'),
+                header(context.tr('restore')),
                 Row(children: [
-                  tool(Icons.palette_outlined, 'Colorize', () {
+                  tool(Icons.palette_outlined, context.tr('colorize'), () {
                     runQuickTool(context,
                         title: 'Colorized',
                         prompt: colorizePrompt,
                         demoLook: 'warm');
                   }),
                   const SizedBox(width: 10),
-                  tool(Icons.hd_outlined, 'Upscale 4x', () {
+                  tool(Icons.hd_outlined, context.tr('upscale'), () {
                     runQuickTool(context,
                         title: 'Upscaled',
                         variant: EnhanceVariant.ultra);
@@ -179,6 +180,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final ai = context.read<AiService>();
+    final tr = context.tr;
+    final palette = context.palette;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
       body: SafeArea(
@@ -213,39 +216,39 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.maroon.withValues(alpha: 0.5),
+                  color: AppColors.red.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  'Demo mode — add BACKEND_URL or REPLICATE_API_TOKEN to use real AI.',
-                  style: TextStyle(fontSize: 12),
+                child: Text(
+                  tr('addKeyBanner'),
+                  style: TextStyle(fontSize: 12, color: palette.textPrimary),
                 ),
               ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 14, 16, 10),
-              child: Text('Enhance ✨',
-                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              child: Text(tr('enhance'),
+                  style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Row(
                 children: [
                   _TabPill(
-                    label: 'Photos',
+                    label: tr('photos'),
                     selected: !_videos,
                     onTap: () => setState(() => _videos = false),
                   ),
                   const SizedBox(width: 8),
                   _TabPill(
-                    label: 'Videos',
+                    label: tr('videos'),
                     selected: _videos,
                     onTap: () => setState(() => _videos = true),
                   ),
                   const Spacer(),
                   IconButton.filledTonal(
                     style: IconButton.styleFrom(
-                        backgroundColor: AppColors.surface),
-                    tooltip: 'Browse gallery',
+                        backgroundColor: palette.surface),
+                    tooltip: tr('browseGallery'),
                     onPressed: _pickFromSystem,
                     icon: const Icon(Icons.photo_library_outlined, size: 20),
                   ),
@@ -272,6 +275,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       onAiPhotos: _openAiPhotos,
                       onFilters: _openFilters,
                       onAllTools: _allTools,
+                      enhanceLabel: tr('enhance'),
+                      photosLabel: tr('aiPhotos'),
+                      filtersLabel: tr('aiFilters'),
+                      toolsLabel: tr('allTools'),
                     ),
                   ),
                 ],
@@ -303,13 +310,13 @@ class _TabPill extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : AppColors.surface,
+          color: selected ? AppColors.red : context.palette.surface,
           borderRadius: BorderRadius.circular(22),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.black : Colors.white,
+            color: selected ? Colors.white : context.palette.textPrimary,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -325,6 +332,10 @@ class _BottomBar extends StatelessWidget {
     required this.onAiPhotos,
     required this.onFilters,
     required this.onAllTools,
+    required this.enhanceLabel,
+    required this.photosLabel,
+    required this.filtersLabel,
+    required this.toolsLabel,
   });
 
   final double bottomInset;
@@ -332,6 +343,10 @@ class _BottomBar extends StatelessWidget {
   final VoidCallback onAiPhotos;
   final VoidCallback onFilters;
   final VoidCallback onAllTools;
+  final String enhanceLabel;
+  final String photosLabel;
+  final String filtersLabel;
+  final String toolsLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -352,7 +367,7 @@ class _BottomBar extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: active ? AppColors.brandGradient : null,
-                      color: active ? null : AppColors.surfaceHigh,
+                      color: active ? null : context.palette.surfaceHigh,
                     ),
                     child: Icon(icon, size: 22),
                   ),
@@ -365,14 +380,15 @@ class _BottomBar extends StatelessWidget {
             ),
           ),
         );
+    final bg = context.palette.background;
     return Container(
       padding: EdgeInsets.fromLTRB(8, 10, 8, 6 + bottomInset),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.background.withValues(alpha: 0),
-            AppColors.background.withValues(alpha: 0.95),
-            AppColors.background,
+            bg.withValues(alpha: 0),
+            bg.withValues(alpha: 0.95),
+            bg,
           ],
           stops: const [0, 0.35, 1],
           begin: Alignment.topCenter,
@@ -381,10 +397,10 @@ class _BottomBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          item(Icons.auto_awesome, 'Enhance', onEnhance, active: true),
-          item(Icons.face_retouching_natural, 'AI Photos', onAiPhotos),
-          item(Icons.filter_vintage_outlined, 'AI Filters', onFilters),
-          item(Icons.keyboard_arrow_up_rounded, 'All Tools', onAllTools),
+          item(Icons.auto_awesome, enhanceLabel, onEnhance, active: true),
+          item(Icons.face_retouching_natural, photosLabel, onAiPhotos),
+          item(Icons.filter_vintage_outlined, filtersLabel, onFilters),
+          item(Icons.keyboard_arrow_up_rounded, toolsLabel, onAllTools),
         ],
       ),
     );

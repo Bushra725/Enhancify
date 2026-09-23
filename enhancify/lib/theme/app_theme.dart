@@ -34,38 +34,126 @@ class AppColors {
   );
 }
 
+/// Surfaces and text that flip between the white theme and the dark theme.
+class AppPalette extends ThemeExtension<AppPalette> {
+  const AppPalette({
+    required this.brightness,
+    required this.background,
+    required this.surface,
+    required this.surfaceHigh,
+    required this.border,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textMuted,
+  });
+
+  final Brightness brightness;
+  final Color background;
+  final Color surface;
+  final Color surfaceHigh;
+  final Color border;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textMuted;
+
+  static const light = AppPalette(
+    brightness: Brightness.light,
+    background: Color(0xFFFFFFFF),
+    surface: Color(0xFFF7F2F3),
+    surfaceHigh: Color(0xFFEFE4E7),
+    border: Color(0xFFE3D4D8),
+    textPrimary: Color(0xFF1A1012),
+    textSecondary: Color(0xFF5C454B),
+    textMuted: Color(0xFF8A7378),
+  );
+
+  static const dark = AppPalette(
+    brightness: Brightness.dark,
+    background: AppColors.background,
+    surface: AppColors.surface,
+    surfaceHigh: AppColors.surfaceHigh,
+    border: AppColors.border,
+    textPrimary: AppColors.textPrimary,
+    textSecondary: AppColors.textSecondary,
+    textMuted: AppColors.textMuted,
+  );
+
+  @override
+  AppPalette copyWith({
+    Brightness? brightness,
+    Color? background,
+    Color? surface,
+    Color? surfaceHigh,
+    Color? border,
+    Color? textPrimary,
+    Color? textSecondary,
+    Color? textMuted,
+  }) =>
+      AppPalette(
+        brightness: brightness ?? this.brightness,
+        background: background ?? this.background,
+        surface: surface ?? this.surface,
+        surfaceHigh: surfaceHigh ?? this.surfaceHigh,
+        border: border ?? this.border,
+        textPrimary: textPrimary ?? this.textPrimary,
+        textSecondary: textSecondary ?? this.textSecondary,
+        textMuted: textMuted ?? this.textMuted,
+      );
+
+  @override
+  AppPalette lerp(ThemeExtension<AppPalette>? other, double t) => this;
+}
+
+extension AppPaletteX on BuildContext {
+  AppPalette get palette =>
+      Theme.of(this).extension<AppPalette>() ?? AppPalette.light;
+}
+
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get dark {
+  static ThemeData get light => _build(AppPalette.light);
+  static ThemeData get dark => _build(AppPalette.dark);
+
+  static ThemeData _build(AppPalette palette) {
+    final isDark = palette.brightness == Brightness.dark;
     final base = ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: palette.brightness,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.crimson,
-        brightness: Brightness.dark,
+        brightness: palette.brightness,
         primary: AppColors.red,
         secondary: AppColors.maroon,
-        surface: AppColors.background,
+        surface: palette.background,
         surfaceTint: Colors.transparent,
       ),
     );
     return base.copyWith(
-      scaffoldBackgroundColor: AppColors.background,
+      scaffoldBackgroundColor: palette.background,
+      extensions: [palette],
       textTheme: base.textTheme.apply(
-        bodyColor: AppColors.textPrimary,
-        displayColor: AppColors.textPrimary,
+        bodyColor: palette.textPrimary,
+        displayColor: palette.textPrimary,
       ),
-      snackBarTheme: const SnackBarThemeData(
+      appBarTheme: AppBarTheme(
+        backgroundColor: palette.background,
+        foregroundColor: palette.textPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
+      iconTheme: IconThemeData(color: palette.textPrimary),
+      snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.surfaceHigh,
-        contentTextStyle: TextStyle(color: Colors.white),
+        backgroundColor: isDark ? AppColors.surfaceHigh : AppColors.maroon,
+        contentTextStyle: const TextStyle(color: Colors.white),
       ),
-      dividerColor: AppColors.border,
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.surface,
+      dividerColor: palette.border,
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: palette.surface,
         showDragHandle: true,
       ),
+      dialogTheme: DialogThemeData(backgroundColor: palette.surface),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected) ? Colors.white : null,
@@ -74,10 +162,22 @@ class AppTheme {
           (s) => s.contains(WidgetState.selected) ? AppColors.red : null,
         ),
       ),
-      sliderTheme: const SliderThemeData(
+      sliderTheme: SliderThemeData(
         activeTrackColor: AppColors.red,
-        thumbColor: Colors.white,
-        inactiveTrackColor: AppColors.border,
+        thumbColor: isDark ? Colors.white : AppColors.maroon,
+        inactiveTrackColor: palette.border,
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected)
+                ? Colors.white
+                : palette.textPrimary,
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? AppColors.red : palette.surface,
+          ),
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/app_config.dart';
+import '../../l10n/l10n.dart';
 import '../../services/ads_service.dart';
 import '../../services/ai_service.dart';
 import '../../services/app_state.dart';
@@ -142,12 +143,12 @@ class _ResultScreenState extends State<ResultScreen> {
           if (ai.demoMode)
             Container(
               width: double.infinity,
-              color: AppColors.maroon,
+              color: AppColors.red.withValues(alpha: 0.12),
               padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-              child: const Text(
-                'Demo mode: connect your AI backend to get real results.',
+              child: Text(
+                context.tr('addKeyBanner'),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: 12, color: context.palette.textPrimary),
               ),
             ),
           Expanded(
@@ -181,7 +182,7 @@ class _ResultScreenState extends State<ResultScreen> {
                         onSelected: (_) => _selectVariant(v),
                         showCheckmark: false,
                         selectedColor: AppColors.red,
-                        backgroundColor: AppColors.surface,
+                        backgroundColor: context.palette.surface,
                         shape: const StadiumBorder(),
                         side: BorderSide.none,
                         label: Row(
@@ -206,7 +207,7 @@ class _ResultScreenState extends State<ResultScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               child: PillButton(
-                label: _autoSaved ? 'Save again' : 'Save',
+                label: _autoSaved ? context.tr('saveAgain') : context.tr('save'),
                 kind: ButtonStyleKind.brand,
                 loading: _saving,
                 leading: _saving

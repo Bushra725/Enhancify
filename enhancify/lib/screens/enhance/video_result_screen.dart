@@ -98,7 +98,7 @@ class _VideoResultScreenState extends State<VideoResultScreen> {
             child: Center(
               child: _error != null
                   ? Text(_error!,
-                      style: const TextStyle(color: AppColors.textSecondary))
+                      style: TextStyle(color: context.palette.textSecondary))
                   : c == null
                       ? const CircularProgressIndicator(color: AppColors.red)
                       : GestureDetector(

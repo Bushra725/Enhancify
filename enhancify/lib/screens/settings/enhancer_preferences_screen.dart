@@ -21,7 +21,7 @@ class EnhancerPreferencesScreen extends StatelessWidget {
           title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
           subtitle: Text(sub,
               style:
-                  const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  TextStyle(color: context.palette.textSecondary, fontSize: 13)),
         );
 
     return Scaffold(
@@ -36,23 +36,23 @@ class EnhancerPreferencesScreen extends StatelessWidget {
                 const Text('Face enhancement strength',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                     'Stronger gives crisper faces; Natural keeps them closer to '
                     'the original.',
                     style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13)),
+                        color: context.palette.textSecondary, fontSize: 13)),
                 Slider(
                   // UI: left = natural, right = strong. Model fidelity is the inverse.
                   value: (1 - p.faceFidelity).clamp(0.0, 1.0),
                   onChanged: (v) => set(p.copyWith(faceFidelity: 1 - v)),
                 ),
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Natural',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                        style: TextStyle(color: context.palette.textMuted, fontSize: 12)),
                     Text('Strong',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                        style: TextStyle(color: context.palette.textMuted, fontSize: 12)),
                   ],
                 ),
               ],

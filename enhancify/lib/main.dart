@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'config/app_config.dart';
+import 'l10n/l10n.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
 import 'services/ads_service.dart';
@@ -19,8 +20,9 @@ Future<void> main() async {
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: AppColors.background,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Colors.white,
+    systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
   final prefs = await SharedPreferences.getInstance();
@@ -28,6 +30,8 @@ Future<void> main() async {
   final purchases = PurchaseService(state, prefs);
   final ads = AdsService(state);
   final ai = AiService();
+  ai.attachKey(() =>
+      state.openAiKey.isNotEmpty ? state.openAiKey : AppConfig.openAiApiKey);
 
   runApp(
     MultiProvider(
@@ -51,12 +55,33 @@ class EnhancifyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final light = state.themeMode != ThemeMode.dark;
+    final rtl = Tr.isRtl(state.languageCode);
     return MaterialApp(
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
+      theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.dark,
+      themeMode: state.themeMode,
+      locale: Locale(state.languageCode),
+      builder: (context, child) {
+        final palette = context.palette;
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness:
+                light ? Brightness.dark : Brightness.light,
+            systemNavigationBarColor: palette.background,
+            systemNavigationBarIconBrightness:
+                light ? Brightness.dark : Brightness.light,
+          ),
+          child: Directionality(
+            textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
+      },
       home: startOnboarded ? const HomeScreen() : const WelcomeScreen(),
     );
   }

@@ -34,13 +34,13 @@ class ConsentScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              const Text('Welcome to ${AppConfig.appName}! 👋',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+              Text('Welcome to ${AppConfig.appName}! 👋',
+                  style: TextStyle(color: context.palette.textSecondary, fontSize: 15)),
               const SizedBox(height: 6),
               const Text('Customize your\nexperience 🫶',
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
               const SizedBox(height: 18),
-              const Expanded(
+              Expanded(
                 child: SingleChildScrollView(
                   child: Text(
                     'We use tracking technologies that either are essential for '
@@ -57,7 +57,7 @@ class ConsentScreen extends StatelessWidget {
                     'For more information about how we process your personal '
                     'data, please read our Privacy Policy.',
                     style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 15, height: 1.45),
+                        color: context.palette.textSecondary, fontSize: 15, height: 1.45),
                   ),
                 ),
               ),

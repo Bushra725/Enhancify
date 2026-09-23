@@ -54,8 +54,8 @@ class _PrivacyPreferencesScreenState extends State<PrivacyPreferencesScreen> {
                         fontSize: 16, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
                 Text(sub,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13)),
+                    style: TextStyle(
+                        color: context.palette.textSecondary, fontSize: 13)),
               ],
             ),
           ),

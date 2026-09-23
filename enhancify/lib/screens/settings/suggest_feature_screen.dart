@@ -50,10 +50,10 @@ class _SuggestFeatureScreenState extends State<SuggestFeatureScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              const Text(
+              Text(
                 'What should we build next? Tell us what would make '
                 '${AppConfig.appName} better for you.',
-                style: TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: context.palette.textSecondary),
               ),
               const SizedBox(height: 14),
               Expanded(
@@ -66,7 +66,7 @@ class _SuggestFeatureScreenState extends State<SuggestFeatureScreen> {
                   decoration: InputDecoration(
                     hintText: 'I would love to...',
                     filled: true,
-                    fillColor: AppColors.surface,
+                    fillColor: context.palette.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(18),
                       borderSide: BorderSide.none,
