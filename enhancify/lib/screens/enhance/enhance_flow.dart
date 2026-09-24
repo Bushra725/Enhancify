@@ -12,6 +12,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/processing_dialog.dart';
 import '../paywall/paywall_screen.dart';
+import '../edit/photo_editor_screen.dart';
 import 'result_screen.dart';
 import 'video_result_screen.dart';
 
@@ -78,18 +79,10 @@ Future<bool> ensureQuota(
 }
 
 /// Preview dialog shown when a photo is tapped (Enhance / Remove Ads & Limits).
-Future<void> startPhotoEnhance(BuildContext context, File file) async {
-  final go = await showDialog<bool>(
-    context: context,
-    barrierColor: Colors.black87,
-    builder: (ctx) => _PreviewDialog(
-      preview: Image.file(file, fit: BoxFit.cover),
-      primaryLabel: 'Enhance',
-      primaryPro: false,
-    ),
-  );
-  if (go != true || !context.mounted) return;
-  await enhancePhoto(context, file);
+Future<void> startPhotoEnhance(BuildContext context, File file, {String tool = 'enhance'}) async {
+  await Navigator.of(context).push(MaterialPageRoute(
+    builder: (_) => PhotoEditorScreen(file: file, tool: tool),
+  ));
 }
 
 Future<void> enhancePhoto(BuildContext context, File file) async {

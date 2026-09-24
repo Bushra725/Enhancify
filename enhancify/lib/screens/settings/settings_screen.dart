@@ -13,7 +13,6 @@ import '../../services/media_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/illustrations.dart';
-import '../ai_photos/selfies_screen.dart';
 import '../paywall/paywall_screen.dart';
 import 'enhancer_preferences_screen.dart';
 import 'privacy_preferences_screen.dart';
@@ -36,64 +35,6 @@ class SettingsScreen extends StatelessWidget {
     if (!ok && context.mounted) {
       showSnack(context, 'Email us at ${AppConfig.supportEmail}');
     }
-  }
-
-  Future<void> _deleteProfile(BuildContext context) async {
-    final state = context.read<AppState>();
-    final hasProfile = state.selfies.isNotEmpty || state.aiHistory.isNotEmpty;
-    if (!hasProfile) {
-      final setUp = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: ctx.palette.surface,
-          title: const Text('No AI profile yet'),
-          content: const Text(
-              'Your AI profile is created when you add selfies for AI Photos.'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('OK')),
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Set up now')),
-          ],
-        ),
-      );
-      if (setUp == true && context.mounted) {
-        await Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const SelfiesScreen()));
-      }
-      return;
-    }
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ctx.palette.surface,
-        title: const Text('Delete AI Profile?'),
-        content: const Text(
-            'This removes your selfies and all generated AI photos from this '
-            'device. This cannot be undone.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete',
-                style: TextStyle(color: AppColors.red)),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    for (final path in [...state.selfies, ...state.aiHistory]) {
-      try {
-        final f = File(path);
-        if (f.existsSync()) f.deleteSync();
-      } catch (_) {}
-    }
-    await state.clearAiProfile();
-    if (context.mounted) showSnack(context, 'AI profile deleted');
   }
 
   Future<void> _redeem(BuildContext context) async {
@@ -190,10 +131,6 @@ class SettingsScreen extends StatelessWidget {
         children: [
           _ProCard(isPro: state.isPro, tier: state.tier),
           const _AppearanceCard(),
-          _Group('AI Photos', [
-            _Item(Icons.delete_sweep_outlined, 'Delete AI Profile',
-                trailing: Icons.refresh, onTap: () => _deleteProfile(context)),
-          ]),
           _Group('Social', [
             const _Item(Icons.share_outlined, 'Share App',
                 onTap: MediaService.shareApp),

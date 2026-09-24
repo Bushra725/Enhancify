@@ -11,6 +11,7 @@ import '../config/app_config.dart';
 import 'app_state.dart';
 import 'cloudflare_service.dart';
 import 'gemini_service.dart';
+import 'local_enhance.dart';
 import 'replicate_service.dart';
 import 'openai_service.dart';
 
@@ -225,6 +226,23 @@ class AiService {
     return _cfRun(inputs, prompt, onStatus: onStatus);
   }
 
+  final _local = LocalEnhance();
+
+  bool _paymentBlocked(Object error) {
+    final text = error.toString().toLowerCase();
+    return text.contains('payment') ||
+        text.contains('billing') ||
+        text.contains('paid plan') ||
+        text.contains('402');
+  }
+
+  Future<File> _localFile(File source, List<int> Function(List<int>) edit) async {
+    final prepared = await prepareImage(source, maxSide: 1600);
+    final out = await _newFile('jpg');
+    await out.writeAsBytes(edit(await prepared.readAsBytes()), flush: true);
+    return out;
+  }
+
   String _enhancePrompt(EnhanceVariant variant, EnhancerPrefs prefs) {
     final strength = prefs.faceFidelity < 0.4
         ? 'Apply a strong, crisp facial restoration.'
@@ -246,58 +264,13 @@ class AiService {
     required EnhancerPrefs prefs,
     StatusCallback? onStatus,
   }) async {
-    if (hasCloudflare) {
-      final prompt = switch (variant) {
-        EnhanceVariant.base => _restorePrompt,
-        EnhanceVariant.natural => _naturalPrompt,
-        EnhanceVariant.ultra => _ultraPrompt,
-      };
-      return _runCf([source], prompt, onStatus: onStatus);
-    }
-    if (hasGemini) {
-      return _geminiEdit(source, _enhancePrompt(variant, prefs), onStatus: onStatus);
-    }
-    if (hasOpenAi) {
-      return _openAiEdit(
-        source,
-        _enhancePrompt(variant, prefs),
-        highDetail: variant == EnhanceVariant.ultra || prefs.upscale >= 4,
-        onStatus: onStatus,
-      );
-    }
-    if (!hasReplicate) {
-      throw AiException('This photo could not be enhanced right now.');
-    }
-    switch (variant) {
-      case EnhanceVariant.base:
-        // CodeFormer only accepts 1x or 2x. A 4x preference is a 2x restore
-        // followed by a 2x upscale.
-        final faceScale = prefs.upscale <= 1 ? 1 : 2;
-        final face = await _runImage(AiModels.faceEnhance, source,
-            input: {
-              'codeformer_fidelity': prefs.faceFidelity,
-              'background_enhance': prefs.backgroundEnhance,
-              'face_upsample': prefs.faceUpsample,
-              'upscale': faceScale,
-            },
-            onStatus: onStatus);
-        if (prefs.upscale < 4) return face;
-        onStatus?.call('Upscaling to 4x...');
-        return _runImage(AiModels.upscale, face,
-            input: {'scale': 2, 'face_enhance': false}, onStatus: onStatus);
-      case EnhanceVariant.natural:
-        return _runImage(AiModels.faceEnhance, source,
-            input: {
-              'codeformer_fidelity': 0.9,
-              'background_enhance': false,
-              'face_upsample': true,
-              'upscale': 2,
-            },
-            onStatus: onStatus);
-      case EnhanceVariant.ultra:
-        return _runImage(AiModels.upscale, source,
-            input: {'scale': 4, 'face_enhance': true}, onStatus: onStatus);
-    }
+    onStatus?.call('Enhancing on this phone...');
+    final name = switch (variant) {
+      EnhanceVariant.base => 'base',
+      EnhanceVariant.natural => 'natural',
+      EnhanceVariant.ultra => 'ultra',
+    };
+    return _localFile(source, (bytes) => _local.apply(bytes, variant: name, prefs: prefs));
   }
 
   // ------------------------------------------------------------ filters
@@ -307,7 +280,27 @@ class AiService {
     StatusCallback? onStatus,
     String demoLook = 'warm',
   }) async {
-    if (hasCloudflare) return _runCf([source], prompt, onStatus: onStatus);
+    if (hasReplicate) {
+      if (_stylizedAvatar(prompt)) {
+        return _runImage(
+          AiModels.avatar,
+          source,
+          input: {'prompt': prompt, 'style': _avatarStyle(prompt)},
+          onStatus: onStatus,
+        );
+      }
+      return _runImage(AiModels.imageEdit, source,
+          input: {'prompt': prompt}, onStatus: onStatus);
+    }
+    if (hasCloudflare) {
+      try {
+        return await _runCf([source], prompt, onStatus: onStatus);
+      } catch (e) {
+        if (!_paymentBlocked(e)) rethrow;
+        onStatus?.call('Applying the style on this phone...');
+        return _localFile(source, (bytes) => _local.style(bytes, prompt));
+      }
+    }
     if (hasGemini) {
       return _geminiEdit(
         source,
@@ -329,6 +322,71 @@ class AiService {
         input: {'prompt': prompt}, onStatus: onStatus);
   }
 
+  bool _stylizedAvatar(String prompt) {
+    final p = prompt.toLowerCase();
+    const words = ['avatar', '3d', 'emoji', 'pixel', 'clay', 'toy', 'cartoon', 'anime', 'illustration'];
+    return words.any(p.contains);
+  }
+
+  String _avatarStyle(String prompt) {
+    final p = prompt.toLowerCase();
+    if (p.contains('pixel')) return 'Pixels';
+    if (p.contains('clay')) return 'Clay';
+    if (p.contains('emoji')) return 'Emoji';
+    if (p.contains('game') || p.contains('cyber')) return 'Video game';
+    if (p.contains('toy')) return 'Toy';
+    return '3D';
+  }
+
+  /// Avatars from the selected selfie. Stylized looks use Stable Diffusion
+  /// (face-to-many). Photo packs use Flux on Replicate so the face stays.
+  Future<List<File>> _avatarsOnReplicate(
+    File selfie,
+    List<String> prompts, {
+    StatusCallback? onStatus,
+    void Function(int done, int total)? onProgress,
+  }) async {
+    onStatus?.call('Uploading your selfie...');
+    final url = await _replicate.uploadFile(await prepareImage(selfie));
+    onStatus?.call('Creating your avatars...');
+    final slots = List<File?>.filled(prompts.length, null);
+    final errors = <Object>[];
+    var done = 0;
+    Future<void> one(int index) async {
+      final prompt = prompts[index];
+      try {
+        final stylized = _stylizedAvatar(prompt);
+        final outs = await _replicate.run(
+          stylized ? AiModels.avatar : AiModels.imageEdit,
+          mediaUrl: url,
+          input: stylized
+              ? {'prompt': prompt, 'style': _avatarStyle(prompt)}
+              : {'prompt': prompt},
+        );
+        final o = outs.first;
+        slots[index] =
+            await _replicate.download(o, await _newFile(_extFromUrl(o, 'jpg')));
+      } catch (e) {
+        errors.add(e);
+      } finally {
+        onProgress?.call(++done, prompts.length);
+      }
+    }
+
+    const batch = 2;
+    for (var i = 0; i < prompts.length; i += batch) {
+      final end = min(i + batch, prompts.length);
+      await Future.wait([for (var j = i; j < end; j++) one(j)]);
+    }
+    final results = slots.whereType<File>().toList();
+    if (results.isEmpty) {
+      throw errors.isNotEmpty
+          ? errors.first
+          : AiException('Could not generate avatars.');
+    }
+    return results;
+  }
+
   // ---------------------------------------------------------- AI photos
   /// Generates one photo per prompt from a selfie. Runs up to 3 in parallel.
   Future<List<File>> generateAiPhotos(
@@ -339,6 +397,14 @@ class AiService {
     void Function(int done, int total)? onProgress,
   }) async {
     if (prompts.isEmpty) return [];
+    if (hasReplicate) {
+      return _avatarsOnReplicate(
+        selfie,
+        prompts,
+        onStatus: onStatus,
+        onProgress: onProgress,
+      );
+    }
     if (hasCloudflare) {
       onStatus?.call('Creating your AI photos...');
       final refs = await _cfInputs([selfie, ...extraSelfies.take(3)]);
@@ -351,7 +417,15 @@ class AiService {
           try {
             results.add(await _cfRun(refs, prompt));
           } catch (e) {
-            errors.add(e);
+            if (_paymentBlocked(e)) {
+              try {
+                results.add(await _localFile(selfie, (bytes) => _local.style(bytes, prompt)));
+              } catch (localError) {
+                errors.add(localError);
+              }
+            } else {
+              errors.add(e);
+            }
           } finally {
             onProgress?.call(++done, prompts.length);
           }
