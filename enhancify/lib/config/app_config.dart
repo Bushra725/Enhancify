@@ -27,6 +27,21 @@ class AppConfig {
       'https://play.google.com/store/apps/details?id=$androidPackage';
   static const String appStoreUrl = 'https://apps.apple.com/app/id0000000000';
 
+  // ---------------------------------------------------- FREE AI (default)
+  /// Cloudflare Worker URL (see /cloudflare). The model key stays on
+  /// Cloudflare. When set, this provider is used for all photo features.
+  static const String cfWorkerUrl =
+      String.fromEnvironment('CF_WORKER_URL', defaultValue: '');
+
+  /// Shared secret for the Worker (sent as `x-app-key`).
+  static const String cfAppKey =
+      String.fromEnvironment('CF_APP_KEY', defaultValue: '');
+
+  static bool get useCloudflare => cfWorkerUrl.isNotEmpty;
+
+  /// Video enhance needs the paid Replicate provider.
+  static bool get supportsVideo => !useCloudflare;
+
   // -------------------------------------------------------------- AI backend
   /// Your proxy server (see /server). Recommended for production because it
   /// keeps the Replicate token off the device.
@@ -52,7 +67,11 @@ class AppConfig {
   /// True only when no OpenAI key was baked in and no Replicate backend exists.
   /// The live key from Settings is checked separately by [AiService].
   static bool get isDemoMode =>
-      openAiApiKey.isEmpty && backendUrl.isEmpty && replicateToken.isEmpty;
+      !useCloudflare &&
+      openAiApiKey.isEmpty &&
+      geminiApiKey.isEmpty &&
+      backendUrl.isEmpty &&
+      replicateToken.isEmpty;
 
   // ------------------------------------------------------- free-tier limits
   static const int freeEnhancementsPerDay = 3;

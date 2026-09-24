@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "555344126006",
+    "project_id": "enhancify-15bd7",
+    "storage_bucket": "enhancify-15bd7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:555344126006:android:baa5605c20bd47ecb83897",
+        "android_client_info": {
+          "package_name": "com.theoccess.enhancify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAxkHuW3YXReMmLZ5oDo2_-58am2a3yK1w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

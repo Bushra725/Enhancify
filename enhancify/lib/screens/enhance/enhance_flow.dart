@@ -135,6 +135,10 @@ Future<void> startVideoEnhance(
   Duration? duration,
   Widget? thumbnail,
 }) async {
+  if (!AppConfig.supportsVideo) {
+    showSnack(context, 'Video enhance is not available on the free AI plan yet.');
+    return;
+  }
   final go = await showDialog<bool>(
     context: context,
     barrierColor: Colors.black87,

@@ -74,6 +74,11 @@ Future<void> _run(
       task: (set) => ai.generateAiPhotos(
         selfie,
         prompts,
+        extraSelfies: state.selfies
+            .where((path) => path != selfie.path && File(path).existsSync())
+            .map(File.new)
+            .take(3)
+            .toList(),
         onStatus: set,
         onProgress: (done, total) {
           if (total > 1 && done < total) set('Creating photo ${done + 1} of $total...');

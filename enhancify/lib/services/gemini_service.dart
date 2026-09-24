@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../config/app_config.dart';
 import 'replicate_service.dart';
 
 /// Edits the photo the person selected with the Gemini image API.
@@ -21,6 +22,12 @@ class GeminiService {
     required File image,
     required String prompt,
   }) async {
+    if (AppConfig.backendUrl.isNotEmpty) {
+      return _editOnServer(image: image, prompt: prompt);
+    }
+    if (apiKey.isEmpty) {
+      throw AiException('Photo enhance is not available right now.');
+    }
     final uri = Uri.parse(
       'https://generativelanguage.googleapis.com/v1beta/models/$_model:generateContent',
     );
@@ -85,5 +92,43 @@ class GeminiService {
       }
     }
     throw AiException('Gemini did not return an image of this photo.');
+  }
+
+  Future<List<int>> _editOnServer({
+    required File image,
+    required String prompt,
+  }) async {
+    final root = AppConfig.backendUrl.endsWith('/')
+        ? AppConfig.backendUrl.substring(0, AppConfig.backendUrl.length - 1)
+        : AppConfig.backendUrl;
+    final response = await _client
+        .post(
+          Uri.parse('$root/v1/gemini/edit'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (AppConfig.backendAppKey.isNotEmpty)
+              'x-app-key': AppConfig.backendAppKey,
+          },
+          body: jsonEncode({
+            'prompt': prompt,
+            'image': base64Encode(await image.readAsBytes()),
+          }),
+        )
+        .timeout(const Duration(minutes: 3));
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        response.bodyBytes.length > 3 &&
+        response.bodyBytes[0] == 0xFF &&
+        response.bodyBytes[1] == 0xD8) {
+      return response.bodyBytes;
+    }
+    var message = 'The photo could not be created right now.';
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map && decoded['detail'] != null) {
+        message = decoded['detail'].toString();
+      }
+    } catch (_) {}
+    throw AiException(message);
   }
 }

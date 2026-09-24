@@ -140,10 +140,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(children: [
                   tool(Icons.auto_awesome, context.tr('enhancePhotos'),
                       () => setState(() => _videos = false)),
-                  const SizedBox(width: 10),
-                  tool(Icons.videocam_outlined, context.tr('enhanceVideos'),
-                      () => setState(() => _videos = true),
-                      pro: true),
+                  if (AppConfig.supportsVideo) ...[
+                    const SizedBox(width: 10),
+                    tool(Icons.videocam_outlined, context.tr('enhanceVideos'),
+                        () => setState(() => _videos = true),
+                        pro: true),
+                  ],
                 ]),
                 const SizedBox(height: 8),
                 header(context.tr('aiGeneration')),
