@@ -45,6 +45,10 @@ class AppConfig {
   static const String openAiApiKey =
       String.fromEnvironment('OPENAI_API_KEY', defaultValue: '');
 
+  /// Gemini image key. Edits the selected photo. End users never enter this.
+  static const String geminiApiKey =
+      String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+
   /// True only when no OpenAI key was baked in and no Replicate backend exists.
   /// The live key from Settings is checked separately by [AiService].
   static bool get isDemoMode =>

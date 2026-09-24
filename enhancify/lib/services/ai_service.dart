@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../config/ai_models.dart';
 import '../config/app_config.dart';
 import 'app_state.dart';
+import 'gemini_service.dart';
 import 'replicate_service.dart';
 import 'openai_service.dart';
 
@@ -43,6 +44,9 @@ class AiService {
     return AppConfig.openAiApiKey;
   }
 
+  String get geminiKey => AppConfig.geminiApiKey;
+
+  bool get hasGemini => geminiKey.isNotEmpty;
   bool get hasOpenAi => openAiKey.isNotEmpty;
   bool get hasReplicate =>
       AppConfig.backendUrl.isNotEmpty || AppConfig.replicateToken.isNotEmpty;
@@ -113,6 +117,24 @@ class AiService {
     return _replicate.download(out, await _newFile(_extFromUrl(out, 'png')));
   }
 
+  Future<File> _geminiEdit(
+    File source,
+    String prompt, {
+    StatusCallback? onStatus,
+  }) async {
+    onStatus?.call('Sending your photo...');
+    final prepared = await prepareImage(source, maxSide: 1280);
+    onStatus?.call('Creating your result...');
+    final bytes = await GeminiService(geminiKey).edit(
+      image: prepared,
+      prompt:
+          'Edit the attached photo only. Keep the same person, face, pose, and identity. $prompt Do not replace this photo with a different picture.',
+    );
+    final out = await _newFile('jpg');
+    await out.writeAsBytes(bytes, flush: true);
+    return out;
+  }
+
   Future<File> _openAiEdit(
     File source,
     String prompt, {
@@ -153,6 +175,9 @@ class AiService {
     required EnhancerPrefs prefs,
     StatusCallback? onStatus,
   }) async {
+    if (hasGemini) {
+      return _geminiEdit(source, _enhancePrompt(variant, prefs), onStatus: onStatus);
+    }
     if (hasOpenAi) {
       return _openAiEdit(
         source,
@@ -203,6 +228,13 @@ class AiService {
     StatusCallback? onStatus,
     String demoLook = 'warm',
   }) async {
+    if (hasGemini) {
+      return _geminiEdit(
+        source,
+        '$prompt Apply this style to the attached photo.',
+        onStatus: onStatus,
+      );
+    }
     if (hasOpenAi) {
       return _openAiEdit(
         source,
@@ -211,7 +243,7 @@ class AiService {
       );
     }
     if (!hasReplicate) {
-      throw AiException('This photo could not be enhanced right now.');
+      throw AiException('This photo could not be restyled right now.');
     }
     return _runImage(AiModels.imageEdit, source,
         input: {'prompt': prompt}, onStatus: onStatus);
@@ -226,11 +258,38 @@ class AiService {
     void Function(int done, int total)? onProgress,
   }) async {
     if (prompts.isEmpty) return [];
-    if (!hasOpenAi && !hasReplicate) {
+    if (!hasGemini && !hasOpenAi && !hasReplicate) {
       throw AiException('These photos could not be created right now.');
     }
     final slots = List<File?>.filled(prompts.length, null);
     var done = 0;
+    if (hasGemini) {
+      onStatus?.call('Creating your AI photos...');
+      final prepared = await prepareImage(selfie, maxSide: 1280);
+      final errors = <Object>[];
+      for (var i = 0; i < prompts.length; i++) {
+        try {
+          final bytes = await GeminiService(geminiKey).edit(
+            image: prepared,
+            prompt:
+                'Edit the attached photo only. Keep the same person and face. ${prompts[i]}',
+          );
+          final out = await _newFile('jpg');
+          await out.writeAsBytes(bytes, flush: true);
+          slots[i] = out;
+        } catch (e) {
+          errors.add(e);
+        }
+        onProgress?.call(i + 1, prompts.length);
+      }
+      final results = slots.whereType<File>().toList();
+      if (results.isEmpty) {
+        throw errors.isNotEmpty
+            ? errors.first
+            : AiException('Could not generate photos.');
+      }
+      return results;
+    }
     if (hasOpenAi) {
       onStatus?.call('Creating your AI photos...');
       final prepared = await prepareImage(selfie);
@@ -303,8 +362,7 @@ class AiService {
   // ------------------------------------------------------------- video
   Future<File> enhanceVideo(File source, {StatusCallback? onStatus}) async {
     if (!hasReplicate) {
-      throw AiException(
-          'Video enhance needs a Replicate token. Photos, filters, and AI photos use your OpenAI key.');
+      throw AiException('Video enhance is not available right now.');
     }
     onStatus?.call('Uploading video...');
     final url = await _replicate.uploadFile(source);
