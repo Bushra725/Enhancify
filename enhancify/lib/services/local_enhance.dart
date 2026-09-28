@@ -1,3 +1,5 @@
+import 'dart:isolate';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
@@ -84,10 +86,11 @@ class LocalEnhance {
     double cropTop = 0,
     double cropRight = 1,
     double cropBottom = 1,
+    int maxSide = 900,
   }) {
     final decoded = img.decodeImage(Uint8List.fromList(bytes));
     if (decoded == null) throw AiException('Could not read this photo.');
-    var image = _fit(decoded, 2000);
+    var image = _fit(img.bakeOrientation(decoded), maxSide);
     final turns = quarterTurns % 4;
     if (turns != 0) image = img.copyRotate(image, angle: turns * 90);
     final l = cropLeft.clamp(0.0, 0.95);
@@ -127,10 +130,68 @@ class LocalEnhance {
     if (grain > 0) {
       image = img.noise(image, grain.clamp(1, 40));
     }
-    if (watermark) _drawLabel(image, 'Enhancify', bottom: true);
+    if (watermark) drawWatermark(image);
     if (!meme && text.trim().isNotEmpty) _drawLabel(image, text.trim(), bottom: false);
     if (sticker.isNotEmpty) _drawLabel(image, sticker, bottom: false, yFraction: 0.18);
     return img.encodeJpg(image, quality: 92);
+  }
+
+  /// Same edit as [bake], on a background isolate so the UI stays responsive.
+  Future<List<int>> bakeOffUi(
+    List<int> bytes, {
+    String look = 'none',
+    double brightness = 1,
+    double contrast = 1,
+    double exposure = 0,
+    double lightness = 0,
+    double highlight = 0,
+    double saturation = 1,
+    double vibrance = 0,
+    double tint = 0,
+    double fade = 0,
+    double grain = 0,
+    double warmth = 0,
+    String filter = 'none',
+    String frame = 'none',
+    String text = '',
+    String sticker = '',
+    bool watermark = false,
+    bool meme = false,
+    int quarterTurns = 0,
+    double cropLeft = 0,
+    double cropTop = 0,
+    double cropRight = 1,
+    double cropBottom = 1,
+    int maxSide = 900,
+  }) {
+    final job = _BakeJob(
+      bytes: Uint8List.fromList(bytes),
+      look: look,
+      brightness: brightness,
+      contrast: contrast,
+      exposure: exposure,
+      lightness: lightness,
+      highlight: highlight,
+      saturation: saturation,
+      vibrance: vibrance,
+      tint: tint,
+      fade: fade,
+      grain: grain,
+      warmth: warmth,
+      filter: filter,
+      frame: frame,
+      text: text,
+      sticker: sticker,
+      watermark: watermark,
+      meme: meme,
+      quarterTurns: quarterTurns,
+      cropLeft: cropLeft,
+      cropTop: cropTop,
+      cropRight: cropRight,
+      cropBottom: cropBottom,
+      maxSide: maxSide,
+    );
+    return Isolate.run(() => _runBake(job));
   }
 
   img.Image _grade(
@@ -280,6 +341,10 @@ class LocalEnhance {
     return img.encodeJpg(image, quality: 92);
   }
 
+  Future<List<int>> redEyeOffUi(Uint8List bytes) {
+    return Isolate.run(() => LocalEnhance().redEye(bytes));
+  }
+
   (int, int, int) sampleColor(List<int> bytes, double fx, double fy) {
     final image = img.decodeImage(Uint8List.fromList(bytes));
     if (image == null) return (128, 128, 128);
@@ -305,6 +370,10 @@ class LocalEnhance {
       }
     }
     return img.encodeJpg(image, quality: 92);
+  }
+
+  Future<List<int>> colorSplashOffUi(Uint8List bytes, {required int r, required int g, required int b}) {
+    return Isolate.run(() => LocalEnhance().colorSplash(bytes, r: r, g: g, b: b));
   }
 
   /// Layers a second photo with multiply or screen.
@@ -347,6 +416,10 @@ class LocalEnhance {
     return out;
   }
 
+  Future<Map<String, String>> readExifOffUi(Uint8List bytes) {
+    return Isolate.run(() => LocalEnhance().readExif(bytes));
+  }
+
   /// Re-encodes without the original metadata and at a smaller size.
   List<int> stripAndCompress(List<int> bytes, {int maxSide = 1600, int quality = 72}) {
     final decoded = img.decodeImage(Uint8List.fromList(bytes));
@@ -366,6 +439,24 @@ class LocalEnhance {
       y: y,
       color: img.ColorRgb8(255, 255, 255),
     );
+  }
+
+  /// Brand watermark: pink (#EA026A) "Enhancify" with a thin white outline,
+  /// sized to the photo and placed bottom-right.
+  static void drawWatermark(img.Image image, {String label = 'Enhancify'}) {
+    final tmp = img.Image(width: label.length * 40 + 24, height: 64, numChannels: 4);
+    final white = img.ColorRgba8(255, 255, 255, 235);
+    for (final (dx, dy) in const [(-2, 0), (2, 0), (0, -2), (0, 2), (-1, -1), (1, 1), (-1, 1), (1, -1)]) {
+      img.drawString(tmp, label, font: img.arial48, x: 10 + dx, y: 6 + dy, color: white);
+    }
+    img.drawString(tmp, label, font: img.arial48, x: 10, y: 6, color: img.ColorRgba8(234, 2, 106, 255));
+    var mark = img.trim(tmp, mode: img.TrimMode.transparent);
+    final targetH = (image.height * 0.035).clamp(14, 160).round();
+    mark = img.copyResize(mark, height: targetH, interpolation: img.Interpolation.average);
+    final margin = (image.width * 0.03).round();
+    img.compositeImage(image, mark,
+        dstX: math.max(0, image.width - mark.width - margin),
+        dstY: math.max(0, image.height - mark.height - margin));
   }
 
   /// Removes a plain background by clearing pixels close to the corner color.
@@ -535,4 +626,90 @@ class LocalEnhance {
         source,
         filter: const [0, -1, 0, -1, 5, -1, 0, -1, 0],
       );
+}
+
+class _BakeJob {
+  const _BakeJob({
+    required this.bytes,
+    required this.look,
+    required this.brightness,
+    required this.contrast,
+    required this.exposure,
+    required this.lightness,
+    required this.highlight,
+    required this.saturation,
+    required this.vibrance,
+    required this.tint,
+    required this.fade,
+    required this.grain,
+    required this.warmth,
+    required this.filter,
+    required this.frame,
+    required this.text,
+    required this.sticker,
+    required this.watermark,
+    required this.meme,
+    required this.quarterTurns,
+    required this.cropLeft,
+    required this.cropTop,
+    required this.cropRight,
+    required this.cropBottom,
+    this.maxSide = 900,
+  });
+
+  final Uint8List bytes;
+  final String look;
+  final double brightness;
+  final double contrast;
+  final double exposure;
+  final double lightness;
+  final double highlight;
+  final double saturation;
+  final double vibrance;
+  final double tint;
+  final double fade;
+  final double grain;
+  final double warmth;
+  final String filter;
+  final String frame;
+  final String text;
+  final String sticker;
+  final bool watermark;
+  final bool meme;
+  final int quarterTurns;
+  final double cropLeft;
+  final double cropTop;
+  final double cropRight;
+  final double cropBottom;
+  final int maxSide;
+}
+
+List<int> _runBake(_BakeJob job) {
+  return LocalEnhance().bake(
+    job.bytes,
+    look: job.look,
+    brightness: job.brightness,
+    contrast: job.contrast,
+    exposure: job.exposure,
+    lightness: job.lightness,
+    highlight: job.highlight,
+    saturation: job.saturation,
+    vibrance: job.vibrance,
+    tint: job.tint,
+    fade: job.fade,
+    grain: job.grain,
+    warmth: job.warmth,
+    filter: job.filter,
+    frame: job.frame,
+    text: job.text,
+    sticker: job.sticker,
+    watermark: job.watermark,
+    meme: job.meme,
+    quarterTurns: job.quarterTurns,
+    cropLeft: job.cropLeft,
+    cropTop: job.cropTop,
+    cropRight: job.cropRight,
+    cropBottom: job.cropBottom,
+    maxSide: job.maxSide,
+  );
 }
