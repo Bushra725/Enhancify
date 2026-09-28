@@ -34,7 +34,7 @@ class MediaService {
           mediaLocation: false,
         ),
       ),
-    );
+    ).timeout(const Duration(seconds: 6), onTimeout: () => PermissionState.denied);
   }
 
   static Future<void> openSettings() => PhotoManager.openSetting();

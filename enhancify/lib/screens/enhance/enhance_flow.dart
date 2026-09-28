@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
@@ -11,6 +12,14 @@ import '../../services/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/processing_dialog.dart';
+import '../collage/collage_screen.dart';
+import '../export/export_screen.dart';
+import '../tools/beauty_screen.dart';
+import '../tools/bg_remover_screen.dart';
+import '../tools/gif_maker_screen.dart';
+import '../tools/music_screen.dart';
+import '../tools/passport_screen.dart';
+import '../tools/remove_object_screen.dart';
 import '../paywall/paywall_screen.dart';
 import '../edit/photo_editor_screen.dart';
 import 'result_screen.dart';
@@ -58,7 +67,7 @@ Future<bool> ensureQuota(
             PillButton(
               label: 'Watch an ad',
               kind: ButtonStyleKind.outline,
-              leading: const Icon(Icons.play_circle_outline, color: Colors.white),
+              leading: const Icon(Icons.play_circle_outline, color: AppColors.primary),
               onPressed: () => Navigator.pop(ctx, 'ad'),
             ),
           ],
@@ -79,9 +88,79 @@ Future<bool> ensureQuota(
 }
 
 /// Preview dialog shown when a photo is tapped (Enhance / Remove Ads & Limits).
+/// HEIC/HEIF photos → JPEG so every on-device tool (and ffmpeg) can read them.
+Future<File> _readable(File file) async {
+  final ext = file.path.toLowerCase();
+  if (!(ext.endsWith('.heic') || ext.endsWith('.heif'))) return file;
+  try {
+    final target = '${Directory.systemTemp.path}/src_${DateTime.now().microsecondsSinceEpoch}.jpg';
+    final out = await FlutterImageCompress.compressAndGetFile(file.absolute.path, target,
+        quality: 95, minWidth: 4000, minHeight: 4000, format: CompressFormat.jpeg);
+    if (out != null) return File(out.path);
+  } catch (_) {}
+  return file;
+}
+
 Future<void> startPhotoEnhance(BuildContext context, File file, {String tool = 'enhance'}) async {
+  if (const {'remove', 'passport', 'gif', 'music', 'bg', 'beauty'}.contains(tool)) {
+    file = await _readable(file);
+    if (!context.mounted) return;
+  }
+  switch (tool) {
+    case 'remove':
+      final bytes = await file.readAsBytes();
+      if (!context.mounted) return;
+      final out = await RemoveObjectScreen.open(context, bytes);
+      if (out == null || !context.mounted) return;
+      final f = File('${Directory.systemTemp.path}/removed_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await f.writeAsBytes(out, flush: true);
+      if (!context.mounted) return;
+      await ExportScreen.open(context, f);
+      return;
+    case 'passport':
+      final bytes = await file.readAsBytes();
+      if (!context.mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        settings: const RouteSettings(name: 'passport'),
+        builder: (_) => PassportScreen(photo: bytes),
+      ));
+      return;
+    case 'gif':
+      final bytes = await file.readAsBytes();
+      if (!context.mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        settings: const RouteSettings(name: 'gif'),
+        builder: (_) => GifMakerScreen(photos: [bytes]),
+      ));
+      return;
+    case 'beauty':
+      final bytes = await file.readAsBytes();
+      if (!context.mounted) return;
+      final out = await BeautyScreen.open(context, bytes);
+      if (out == null || !context.mounted) return;
+      final f = File('${Directory.systemTemp.path}/beauty_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await f.writeAsBytes(out, flush: true);
+      if (!context.mounted) return;
+      await ExportScreen.open(context, f);
+      return;
+    case 'bg':
+      final bytes = await file.readAsBytes();
+      if (!context.mounted) return;
+      await BgRemoverScreen.open(context, bytes);
+      return;
+    case 'music':
+      await Navigator.of(context).push(MaterialPageRoute(
+        settings: const RouteSettings(name: 'music'),
+        builder: (_) => MusicScreen(image: file),
+      ));
+      return;
+  }
+  if (!context.mounted) return;
   await Navigator.of(context).push(MaterialPageRoute(
-    builder: (_) => PhotoEditorScreen(file: file, tool: tool),
+    settings: RouteSettings(name: tool),
+    builder: (_) => tool == 'collage'
+        ? CollageScreen(initialPhotos: [file])
+        : PhotoEditorScreen(file: file, tool: tool),
   ));
 }
 

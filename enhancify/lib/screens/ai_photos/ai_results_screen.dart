@@ -9,6 +9,7 @@ import '../../services/media_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../paywall/paywall_screen.dart';
+import '../export/export_screen.dart';
 
 /// Swipeable viewer for generated photos with save / share.
 class AiResultsScreen extends StatefulWidget {
@@ -120,6 +121,10 @@ class _AiResultsScreenState extends State<AiResultsScreen> {
                 ),
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: SocialShareBar(file: files[_index]),
+          ),
           SafeArea(
             top: false,
             child: Padding(

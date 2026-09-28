@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import '../../services/media_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../export/export_screen.dart';
 
 class VideoResultScreen extends StatefulWidget {
   const VideoResultScreen({
@@ -132,6 +133,10 @@ class _VideoResultScreenState extends State<VideoResultScreen> {
                 _load();
               },
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: SocialShareBar(file: widget.result),
           ),
           SafeArea(
             top: false,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../config/app_config.dart';
+import '../../l10n/l10n.dart';
 import '../../services/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
@@ -15,14 +15,14 @@ class DiscoverScreen extends StatefulWidget {
 }
 
 class _DiscoverScreenState extends State<DiscoverScreen> {
-  static const _none = 'None of these options';
+  static const _none = 'none';
   static const _options = [
     'Facebook',
     'TikTok',
     'Snapchat',
     'Instagram',
     'YouTube',
-    'Friends or family',
+    'friends',
     _none,
   ];
 
@@ -84,15 +84,19 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       ),
                     ),
                     const SizedBox(height: 28),
-                    const Text(
-                      'Where did you discover\n${AppConfig.appName}?',
-                      style: TextStyle(
+                    Text(
+                      context.tr('discoverTitle'),
+                      style: const TextStyle(
                           fontSize: 26, fontWeight: FontWeight.w800, height: 1.15),
                     ),
                     const SizedBox(height: 22),
                     for (final o in _options) ...[
                       _OptionTile(
-                        label: o,
+                        label: o == 'friends'
+                            ? context.tr('friendsFamily')
+                            : o == _none
+                                ? context.tr('noneOfThese')
+                                : o,
                         selected: _selected == o,
                         onTap: () => setState(() => _selected = o),
                       ),
@@ -105,7 +109,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                         maxLength: 200,
                         autofocus: true,
                         decoration: InputDecoration(
-                          hintText: 'Write your answer here...',
+                          hintText: context.tr('writeAnswer'),
                           filled: true,
                           fillColor: context.palette.surface,
                           border: OutlineInputBorder(
@@ -124,7 +128,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   child: SizedBox(
                     width: 150,
                     child: PillButton(
-                      label: 'Submit',
+                      label: context.tr('submit'),
                       onPressed: _canSubmit ? _submit : null,
                       trailing: const Icon(Icons.arrow_forward_ios_rounded),
                     ),
@@ -161,10 +165,10 @@ class _OptionTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
-          color: selected ? AppColors.maroon.withValues(alpha: 0.35) : null,
+          color: selected ? AppColors.blush : null,
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
-            color: selected ? AppColors.red : AppColors.border,
+            color: selected ? AppColors.red : context.palette.border,
             width: selected ? 2 : 1.4,
           ),
         ),

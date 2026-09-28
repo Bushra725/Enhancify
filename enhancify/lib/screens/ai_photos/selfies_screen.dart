@@ -166,7 +166,7 @@ class _SelfiesScreenState extends State<SelfiesScreen> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.border),
+                                  border: Border.all(color: context.palette.border),
                                 ),
                                 child: const Icon(Icons.add, size: 30),
                               ),

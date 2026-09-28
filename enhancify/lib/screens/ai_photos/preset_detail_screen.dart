@@ -29,11 +29,11 @@ class PresetDetailScreen extends StatelessWidget {
                   imageUrl: shot.imageUrl,
                   radius: 0,
                 ),
-                const DecoratedBox(
+                DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Colors.transparent, AppColors.background],
-                      stops: [0.6, 1],
+                      colors: [Colors.transparent, context.palette.background],
+                      stops: const [0.6, 1],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),

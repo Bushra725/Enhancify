@@ -55,6 +55,8 @@ void _ios() {
         '<string>Enhancify saves your enhanced photos and videos to your library.</string>',
     'NSCameraUsageDescription':
         '<string>Enhancify uses the camera to take photos to enhance.</string>',
+    'NSAppleMusicUsageDescription':
+        '<string>Enhancify lets you pick a song to add to your photo.</string>',
     'NSMicrophoneUsageDescription':
         '<string>Enhancify needs the microphone to record videos.</string>',
     'PHPhotoLibraryPreventAutomaticLimitedAccessAlert': '<true/>',

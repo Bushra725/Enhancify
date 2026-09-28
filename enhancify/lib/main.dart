@@ -1,14 +1,15 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'config/app_config.dart';
 import 'l10n/l10n.dart';
-import 'screens/home/home_screen.dart';
-import 'screens/onboarding/welcome_screen.dart';
+import 'screens/onboarding/splash_screen.dart';
 import 'services/ads_service.dart';
 import 'services/ai_service.dart';
 import 'services/app_state.dart';
@@ -25,7 +26,17 @@ Future<void> main() async {
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
-  final prefs = await SharedPreferences.getInstance();
+  late final SharedPreferences prefs;
+  try {
+    prefs = await SharedPreferences.getInstance();
+  } catch (e) {
+    runApp(MaterialApp(
+      home: Scaffold(
+        body: Center(child: Text('Could not open the app.\n$e', textAlign: TextAlign.center)),
+      ),
+    ));
+    return;
+  }
   final state = AppState(prefs);
   final purchases = PurchaseService(state, prefs);
   final ads = AdsService(state);
@@ -46,12 +57,25 @@ Future<void> main() async {
   );
 
   unawaited(purchases.init());
-  if (state.consentAsked) unawaited(ads.init());
+  unawaited(ads.init());
 }
 
-class EnhancifyApp extends StatelessWidget {
+class EnhancifyApp extends StatefulWidget {
   const EnhancifyApp({super.key, required this.startOnboarded});
   final bool startOnboarded;
+
+  @override
+  State<EnhancifyApp> createState() => _EnhancifyAppState();
+}
+
+class _EnhancifyAppState extends State<EnhancifyApp> {
+  late final ExitAdObserver _exitAds;
+
+  @override
+  void initState() {
+    super.initState();
+    _exitAds = ExitAdObserver(context.read<AdsService>());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,16 +89,24 @@ class EnhancifyApp extends StatelessWidget {
       darkTheme: AppTheme.dark,
       themeMode: state.themeMode,
       locale: Locale(state.languageCode),
+      supportedLocales: [for (final code in Tr.codes) Locale(code)],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        _MaterialFallback(),
+        _WidgetsFallback(),
+        _CupertinoFallback(),
+      ],
+      navigatorObservers: [_exitAds],
       builder: (context, child) {
         final palette = context.palette;
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
-            statusBarIconBrightness:
-                light ? Brightness.dark : Brightness.light,
+            statusBarIconBrightness: light ? Brightness.dark : Brightness.light,
             systemNavigationBarColor: palette.background,
-            systemNavigationBarIconBrightness:
-                light ? Brightness.dark : Brightness.light,
+            systemNavigationBarIconBrightness: light ? Brightness.dark : Brightness.light,
           ),
           child: Directionality(
             textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
@@ -82,7 +114,55 @@ class EnhancifyApp extends StatelessWidget {
           ),
         );
       },
-      home: startOnboarded ? const HomeScreen() : const WelcomeScreen(),
+      home: SplashScreen(onboarded: widget.startOnboarded),
     );
   }
+}
+
+class _MaterialFallback extends LocalizationsDelegate<MaterialLocalizations> {
+  const _MaterialFallback();
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<MaterialLocalizations> load(Locale locale) {
+    final usable = GlobalMaterialLocalizations.delegate.isSupported(locale) ? locale : const Locale('en');
+    return GlobalMaterialLocalizations.delegate.load(usable);
+  }
+
+  @override
+  bool shouldReload(covariant LocalizationsDelegate<MaterialLocalizations> old) => false;
+}
+
+class _WidgetsFallback extends LocalizationsDelegate<WidgetsLocalizations> {
+  const _WidgetsFallback();
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<WidgetsLocalizations> load(Locale locale) {
+    final usable = GlobalWidgetsLocalizations.delegate.isSupported(locale) ? locale : const Locale('en');
+    return GlobalWidgetsLocalizations.delegate.load(usable);
+  }
+
+  @override
+  bool shouldReload(covariant LocalizationsDelegate<WidgetsLocalizations> old) => false;
+}
+
+class _CupertinoFallback extends LocalizationsDelegate<CupertinoLocalizations> {
+  const _CupertinoFallback();
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<CupertinoLocalizations> load(Locale locale) {
+    final usable = GlobalCupertinoLocalizations.delegate.isSupported(locale) ? locale : const Locale('en');
+    return GlobalCupertinoLocalizations.delegate.load(usable);
+  }
+
+  @override
+  bool shouldReload(covariant LocalizationsDelegate<CupertinoLocalizations> old) => false;
 }

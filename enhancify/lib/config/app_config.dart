@@ -86,11 +86,13 @@ class AppConfig {
   static const String liteWeekly = 'enhancify_lite_weekly';
   static const String liteYearly = 'enhancify_lite_yearly';
   static const String proWeekly = 'enhancify_pro_weekly';
+  static const String proMonthly = 'enhancify_pro_monthly';
   static const String proYearly = 'enhancify_pro_yearly';
   static const Set<String> productIds = {
     liteWeekly,
     liteYearly,
     proWeekly,
+    proMonthly,
     proYearly,
   };
 
@@ -99,6 +101,7 @@ class AppConfig {
     liteWeekly: '\$2.99',
     liteYearly: '\$29.99',
     proWeekly: '\$6.99',
+    proMonthly: '\$1.99',
     proYearly: '\$49.99',
   };
 
@@ -117,6 +120,12 @@ class AppConfig {
     if (kIsWeb) return '';
     if (Platform.isAndroid) return 'ca-app-pub-3940256099942544/5224354917';
     return 'ca-app-pub-3940256099942544/1712485313';
+  }
+
+  static String get bannerAdUnitId {
+    if (kIsWeb) return '';
+    if (Platform.isAndroid) return 'ca-app-pub-3940256099942544/6300978111';
+    return 'ca-app-pub-3940256099942544/2934735716';
   }
 
   static String get storeUrl {

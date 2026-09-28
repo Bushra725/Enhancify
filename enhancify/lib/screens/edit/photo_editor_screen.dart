@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../avatar/avatar_panel.dart';
 import '../../data/sticker_data.dart';
@@ -14,12 +15,15 @@ import '../../editor/mask_painter.dart';
 import '../../editor/overlay_controller.dart';
 import '../../editor/text_templates.dart';
 import '../../editor/text_view.dart';
+import '../../l10n/l10n.dart';
+import '../../services/app_state.dart';
 import '../../services/local_enhance.dart';
 import '../../services/media_service.dart';
 import '../../services/object_remover.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../collage/collage_screen.dart';
+import '../paywall/paywall_screen.dart';
 import '../export/export_screen.dart';
 import '../tools/beauty_screen.dart';
 import '../tools/bg_remover_screen.dart';
@@ -68,7 +72,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   String _panel = 'adjust';
   String _adj = 'brightness';
   int _turns = 0;
-  bool _watermark = false;
+  bool _watermark = true;
   bool _busy = false;
   bool _rendering = false;
   bool _renderAgain = false;
@@ -104,6 +108,25 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
     _Adj('grain', 'Grain', Icons.grain, 0, 30, 0),
   ];
 
+  static const _filterKeys = {
+    'none': 'filterOriginal',
+    'vivid': 'filterVivid',
+    'warm': 'filterWarm',
+    'cool': 'filterCool',
+    'bw': 'filterBw',
+    'sepia': 'filterSepia',
+    'vintage': 'filterVintage',
+    'noir': 'filterNoir',
+    'pencil': 'filterPencil',
+    'cartoon': 'filterCartoon',
+    'avatar3d': 'filterToon',
+    'pixel': 'filterPixel',
+    'clay': 'filterClay',
+    'sketch': 'filterSketch',
+  };
+
+  String _filterKey(String id) => _filterKeys[id] ?? id;
+
   static const _filters = <(String, String)>[
     ('none', 'Original'), ('vivid', 'Vivid'), ('warm', 'Warm'), ('cool', 'Cool'),
     ('bw', 'B&W'), ('sepia', 'Sepia'), ('vintage', 'Vintage'), ('noir', 'Noir'),
@@ -132,6 +155,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         Navigator.of(context).pushReplacement(MaterialPageRoute(
+          settings: const RouteSettings(name: 'collage'),
           builder: (_) => CollageScreen(initialPhotos: [widget.file]),
         ));
       });
@@ -214,6 +238,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   /// Bakes the current edit. [maxSide] 900 for the preview, larger to save.
   Future<List<int>> _bakeWith(Uint8List src, {int maxSide = 900, bool? watermark}) {
     final box = _cropBox;
+    final pro = context.read<AppState>().isPro;
     return _engine.bakeOffUi(
       src,
       look: _look,
@@ -232,7 +257,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
       frame: _frame,
       text: _meme ? _memeText : '',
       meme: _meme,
-      watermark: watermark ?? _watermark,
+      watermark: watermark ?? (pro ? _watermark : true),
       quarterTurns: _turns,
       cropLeft: box.$1,
       cropTop: box.$2,
@@ -257,7 +282,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
         final current = _original;
         if (current == null) break;
         final snapshot = Map<String, double>.of(_values);
-        final bytes = await _bakeWith(current);
+        final bytes = await _bakeWith(current, watermark: false);
         if (!mounted) return;
         if (_renderAgain) continue;
         final out = Uint8List.fromList(bytes);
@@ -373,7 +398,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
     if (out == null || !mounted) return;
     _replaceOriginal(out);
     await _render();
-    if (mounted) showSnack(context, 'Beauty applied ✨');
+    if (mounted) showSnack(context, context.tr('beautyApplied'));
   }
 
   Future<void> _openRemover() async {
@@ -387,7 +412,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   }
 
   Future<void> _music() => _withRendered(1600, (file) async {
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => MusicScreen(image: file)));
+        await Navigator.of(context).push(MaterialPageRoute(
+          settings: const RouteSettings(name: 'music'),
+          builder: (_) => MusicScreen(image: file),
+        ));
       });
 
   /// Canva-style remover: shows the cut-out right away, then save/share.
@@ -415,7 +443,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   Future<void> _gif() => _withRendered(900, (file) async {
         final bytes = await file.readAsBytes();
         if (!mounted) return;
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => GifMakerScreen(photos: [bytes])));
+        await Navigator.of(context).push(MaterialPageRoute(
+          settings: const RouteSettings(name: 'gif'),
+          builder: (_) => GifMakerScreen(photos: [bytes]),
+        ));
       });
 
   void _remember() {
@@ -551,7 +582,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
       showSnack(context, 'Could not read this photo.');
       return;
     }
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PassportScreen(photo: baked)));
+    await Navigator.of(context).push(MaterialPageRoute(
+      settings: const RouteSettings(name: 'passport'),
+      builder: (_) => PassportScreen(photo: baked),
+    ));
   }
 
   Future<void> _toggleMeme() async {
@@ -586,11 +620,11 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Photo details'),
+        title: Text(context.tr('photoDetails')),
         content: SizedBox(
           width: 320,
           child: tags.isEmpty
-              ? const Text('No EXIF metadata on this photo.')
+              ? Text(context.tr('noExif'))
               : SingleChildScrollView(
                   child: Text(tags.entries.map((e) => '${e.key}\n${e.value}').join('\n\n')),
                 ),
@@ -603,9 +637,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
               await _render();
               if (mounted) showSnack(context, 'Metadata removed and photo compressed.');
             },
-            child: const Text('Strip metadata'),
+            child: Text(context.tr('stripMeta')),
           ),
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('close'))),
         ],
       ),
     );
@@ -669,7 +703,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                 visualDensity: VisualDensity.compact,
               ),
               onPressed: preview == null || _busy ? null : _done,
-              child: const Text('Done'),
+              child: Text(context.tr('done')),
             ),
           ),
         ],
@@ -698,6 +732,20 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                                       fit: BoxFit.fill, gaplessPlayback: true),
                                 ),
                               ),
+                              if (_watermark)
+                                const Positioned(
+                                  right: 10,
+                                  bottom: 8,
+                                  child: Text(
+                                    'Enhancify',
+                                    style: TextStyle(
+                                      color: Color(0xFFEA026A),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                      shadows: [Shadow(color: Colors.white, blurRadius: 2)],
+                                    ),
+                                  ),
+                                ),
                               if (widget.tool == 'restore' || _splash)
                                 GestureDetector(
                                   behavior: HitTestBehavior.opaque,
@@ -726,7 +774,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
           if (_splash)
             Padding(
               padding: const EdgeInsets.all(6),
-              child: Text('Tap a color in the photo to keep it',
+              child: Text(context.tr('tapColor'),
                   style: TextStyle(color: palette.textSecondary)),
             ),
           if (!_focusedTool)
@@ -736,18 +784,18 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 children: [
-                  _tab(Icons.tune, 'Adjust', 'adjust'),
-                  _tab(Icons.filter_vintage_outlined, 'Filter', 'filter'),
-                  _tab(Icons.auto_awesome_outlined, 'Beauty', 'beauty'),
-                  _tab(Icons.crop_rotate, 'Crop', 'crop'),
-                  _tab(Icons.auto_fix_high, 'Remove', 'remove'),
-                  _tab(Icons.text_fields, 'Text', 'text'),
-                  _tab(Icons.emoji_emotions_outlined, 'Emoji', 'emoji'),
-                  _tab(Icons.auto_awesome, 'Stickers', 'sticker'),
-                  _tab(Icons.face_retouching_natural, 'Avatar', 'avatar'),
-                  _tab(Icons.brush_outlined, 'Draw', 'draw'),
-                  _tab(Icons.face_2_outlined, 'Makeup', 'makeup'),
-                  _tab(Icons.more_horiz, 'More', 'more'),
+                  _tab(Icons.tune, context.tr('adjust'), 'adjust'),
+                  _tab(Icons.filter_vintage_outlined, context.tr('filter'), 'filter'),
+                  _tab(Icons.auto_awesome_outlined, context.tr('beauty'), 'beauty'),
+                  _tab(Icons.crop_rotate, context.tr('crop'), 'crop'),
+                  _tab(Icons.auto_fix_high, context.tr('remove'), 'remove'),
+                  _tab(Icons.text_fields, context.tr('text'), 'text'),
+                  _tab(Icons.emoji_emotions_outlined, context.tr('emoji'), 'emoji'),
+                  _tab(Icons.auto_awesome, context.tr('stickers'), 'sticker'),
+                  _tab(Icons.face_retouching_natural, context.tr('avatar'), 'avatar'),
+                  _tab(Icons.brush_outlined, context.tr('draw'), 'draw'),
+                  _tab(Icons.face_2_outlined, context.tr('makeup'), 'makeup'),
+                  _tab(Icons.more_horiz, context.tr('more'), 'more'),
                 ],
               ),
             ),
@@ -802,11 +850,11 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   String get _screenTitle {
     switch (widget.tool) {
       case 'restore':
-        return 'Restore';
+        return context.tr('restore');
       case 'enhance':
-        return 'Enhance';
+        return context.tr('enhance');
       default:
-        return 'Edit photo';
+        return context.tr('editPhoto');
     }
   }
 
@@ -818,11 +866,11 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.all(12),
           children: [
-            for (final (id, label) in _filters)
+            for (final (id, _) in _filters)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ChoiceChip(
-                  label: Text(label),
+                  label: Text(context.tr(_filterKey(id))),
                   selected: _filter == id,
                   onSelected: (_) {
                     setState(() => _filter = id);
@@ -845,7 +893,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                       style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
                       onPressed: () => _overlay.addText(context),
                       icon: const Icon(Icons.text_fields),
-                      label: const Text('Add text'),
+                      label: Text(context.tr('addText')),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -853,7 +901,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => _overlay.addPhotoSticker(context),
                       icon: const Icon(Icons.add_photo_alternate_outlined),
-                      label: const Text('Photo sticker'),
+                      label: Text(context.tr('photoSticker')),
                     ),
                   ),
                 ],
@@ -861,7 +909,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 2, 14, 4),
-              child: Text('Popular text styles · tap to add, tap again to edit',
+              child: Text(context.tr('popularStyles'),
                   style: TextStyle(fontSize: 12, color: palette.textMuted)),
             ),
             Expanded(
@@ -907,7 +955,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                 style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
                 onPressed: () => _overlay.addEmoji(context),
                 icon: const Icon(Icons.emoji_emotions_outlined),
-                label: const Text('All emoji (1,800+)'),
+                label: Text(context.tr('allEmoji')),
               ),
             ),
             Expanded(
@@ -940,7 +988,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                       style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
                       onPressed: () => _overlay.addSticker(context),
                       icon: const Icon(Icons.grid_view_rounded),
-                      label: const Text('All stickers'),
+                      label: Text(context.tr('allStickers')),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -948,7 +996,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => _overlay.addPhotoSticker(context),
                       icon: const Icon(Icons.person_add_alt),
-                      label: const Text('From my photo'),
+                      label: Text(context.tr('fromMyPhoto')),
                     ),
                   ),
                 ],
@@ -1009,7 +1057,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           children: [
-            const Text('Restores old or damaged photos. Recover faded color, then paint over scars, cuts, or worn spots.'),
+            Text(context.tr('restoreBlurb')),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -1039,39 +1087,39 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
               runSpacing: 6,
               children: [
                 ChoiceChip(
-                  label: const Text('Paint'),
+                  label: Text(context.tr('paint')),
                   avatar: const Icon(Icons.brush, size: 16),
                   selected: !_maskErase,
                   onSelected: (_) => setState(() => _maskErase = false),
                 ),
                 ChoiceChip(
-                  label: const Text('Eraser'),
+                  label: Text(context.tr('eraser')),
                   avatar: const Icon(Icons.auto_fix_off, size: 16),
                   selected: _maskErase,
                   onSelected: (_) => setState(() => _maskErase = true),
                 ),
                 ChoiceChip(
-                  label: const Text('Smooth fill'),
+                  label: Text(context.tr('smoothFill')),
                   tooltip: 'Seamless blend of the colors around. Best for scratches, dust and spots.',
                   selected: _fillMode == FillMode.smooth,
                   onSelected: (_) => setState(() => _fillMode = FillMode.smooth),
                 ),
                 ChoiceChip(
-                  label: const Text('Texture fill'),
+                  label: Text(context.tr('textureFill')),
                   tooltip: 'Rebuilds the area from matching texture in the photo (like Photoshop content-aware fill).',
                   selected: _fillMode == FillMode.texture,
                   onSelected: (_) => setState(() => _fillMode = FillMode.texture),
                 ),
                 ActionChip(
-                  label: const Text('Undo mark'),
+                  label: Text(context.tr('undoMark')),
                   onPressed: _mask.isEmpty ? null : () => setState(() => _mask.removeLast()),
                 ),
                 ActionChip(
-                  label: const Text('Clear mask'),
+                  label: Text(context.tr('clearMask')),
                   onPressed: () => setState(() => _mask.clear()),
                 ),
                 ActionChip(
-                  label: Text(_busy ? 'Filling…' : 'Fill marked areas'),
+                  label: Text(_busy ? '…' : context.tr('fillMarked')),
                   onPressed: _busy ? null : _runRemove,
                 ),
               ],
@@ -1082,10 +1130,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           children: [
-            const Text('Sharpens the photo and balances light and color.'),
+            Text(context.tr('enhanceBlurb')),
             const SizedBox(height: 12),
             Wrap(spacing: 8, children: [
-              _action(_look == 'enhance' ? 'Enhance on' : 'Enhance photo', () {
+              _action(_look == 'enhance' ? context.tr('enhanceOn') : context.tr('enhancePhoto'), () {
                 setState(() => _look = _look == 'enhance' ? 'none' : 'enhance');
                 _render();
               }),
@@ -1098,9 +1146,13 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
           children: [
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Watermark'),
+              title: Text(context.tr('watermark')),
               value: _watermark,
-              onChanged: (v) {
+              onChanged: (v) async {
+                if (!v && !context.read<AppState>().isPro) {
+                  await openPaywall(context, preferPro: true);
+                  if (!mounted || !context.read<AppState>().isPro) return;
+                }
                 setState(() => _watermark = v);
                 _render();
               },
@@ -1109,25 +1161,25 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
               spacing: 8,
               runSpacing: 6,
               children: [
-                _action('Crop & ratio', () => _openCrop()),
-                _action('Rotate & flip', () => _openCrop(rotate: true)),
-                _action('Remove object', _openRemover),
-                _action('Remove background', _removeBackground),
-                _action('Make GIF', _gif),
-                _action('Add music', _music),
-                _action('Red-eye', _redEye),
-                _action('Color splash', () => setState(() => _splash = true)),
-                _action('Double exposure', _blend),
-                _action('Passport photo', _passport),
+                _action(context.tr('cropRatio'), () => _openCrop()),
+                _action(context.tr('rotateFlip'), () => _openCrop(rotate: true)),
+                _action(context.tr('removeObject'), _openRemover),
+                _action(context.tr('changeBg'), _removeBackground),
+                _action(context.tr('makeGif'), _gif),
+                _action(context.tr('addMusic'), _music),
+                _action(context.tr('redEye'), _redEye),
+                _action(context.tr('colorSplash'), () => setState(() => _splash = true)),
+                _action(context.tr('doubleExposure'), _blend),
+                _action(context.tr('passport'), _passport),
                 _action('EXIF', _exif),
-                _action('Batch compress', _batch),
-                _action('Frame: $_frame', () {
+                _action(context.tr('batchCompress'), _batch),
+                _action('${context.tr('frame')}: $_frame', () {
                   const frames = ['none', 'white', 'black', 'polaroid', 'vignette'];
                   final i = frames.indexOf(_frame);
                   setState(() => _frame = frames[(i + 1) % frames.length]);
                   _render();
                 }),
-                _action(_meme ? 'Meme on' : 'Meme bars', _toggleMeme),
+                _action(_meme ? context.tr('memeOn') : context.tr('memeBars'), _toggleMeme),
               ],
             ),
           ],
@@ -1179,7 +1231,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                             size: 20, color: sel ? Colors.white : palette.textPrimary),
                       ),
                       const SizedBox(height: 4),
-                      Text(x.label,
+                      Text(context.tr(x.id),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -1292,31 +1344,31 @@ class _MemeBarsDialogState extends State<_MemeBarsDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       scrollable: true,
-      title: const Text('Meme bars'),
+      title: Text(context.tr('memeBars')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _top,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'Top line'),
+            decoration: InputDecoration(hintText: context.tr('topLine')),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _bottom,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'Bottom line'),
+            decoration: InputDecoration(hintText: context.tr('bottomLine')),
           ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('cancel'))),
         TextButton(
           onPressed: () {
             final caption = '${_top.text.trim()}\n${_bottom.text.trim()}'.trim();
             Navigator.pop(context, caption);
           },
-          child: const Text('Add'),
+          child: Text(context.tr('add')),
         ),
       ],
     );

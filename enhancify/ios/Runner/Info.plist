@@ -70,6 +70,8 @@
 	<string>Enhancify needs access to your photos so you can enhance them.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Enhancify saves your enhanced photos and videos to your library.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Enhancify lets you pick a song to add to your photo.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Enhancify uses the camera to take photos to enhance.</string>
 	<key>NSMicrophoneUsageDescription</key>

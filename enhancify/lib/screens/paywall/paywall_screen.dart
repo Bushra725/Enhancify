@@ -9,7 +9,7 @@ import '../../widgets/common.dart';
 
 enum _Plan { lite, pro }
 
-enum _Period { weekly, yearly }
+enum _Period { monthly, yearly }
 
 /// Opens the paywall. Returns true if the user is subscribed afterwards.
 Future<bool> openPaywall(BuildContext context, {bool preferPro = true}) async {
@@ -36,7 +36,7 @@ class PaywallScreen extends StatefulWidget {
 
 class _PaywallScreenState extends State<PaywallScreen> {
   late _Plan _plan = widget.preferPro ? _Plan.pro : _Plan.lite;
-  _Period _period = _Period.weekly;
+  _Period _period = _Period.monthly;
   bool _trial = false;
   bool _closing = false;
   late final bool _wasPaid = context.read<AppState>().isPaid;
@@ -54,6 +54,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
   static const _features = <(IconData, String, bool)>[
     (Icons.auto_awesome_outlined, 'Unlimited Photo Enhancements', false),
     (Icons.block_outlined, 'No Ads', false),
+    (Icons.branding_watermark_outlined, 'Remove Watermark', false),
     (Icons.filter_vintage_outlined, 'All AI Filters', false),
     (Icons.download_outlined, 'Unlimited Saves', false),
     (Icons.face_retouching_natural, 'AI Photo Full Packs', true),
@@ -62,9 +63,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
   ];
 
   String get _productId => switch ((_plan, _period)) {
-        (_Plan.lite, _Period.weekly) => AppConfig.liteWeekly,
+        (_Plan.lite, _Period.monthly) => AppConfig.liteWeekly,
         (_Plan.lite, _Period.yearly) => AppConfig.liteYearly,
-        (_Plan.pro, _Period.weekly) => AppConfig.proWeekly,
+        (_Plan.pro, _Period.monthly) => AppConfig.proMonthly,
         (_Plan.pro, _Period.yearly) => AppConfig.proYearly,
       };
 
@@ -122,7 +123,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
 
     final price = purchases.priceFor(_productId);
-    final periodWord = _period == _Period.weekly ? 'week' : 'year';
+    final periodWord = _period == _Period.monthly ? 'month' : 'year';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -188,11 +189,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           ),
                         ],
                         const SizedBox(height: 16),
-                        if (_plan == _Plan.pro &&
-                            _period == _Period.weekly &&
-                            (!purchases.available ||
-                                purchases.hasTrialOffer(AppConfig.proWeekly)))
-                          _trialToggle(),
                       ],
                     ),
                   ),
@@ -296,7 +292,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
           iconEnabledColor: Colors.white,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
           items: const [
-            DropdownMenuItem(value: _Period.weekly, child: Text('Weekly')),
+            DropdownMenuItem(value: _Period.monthly, child: Text('Monthly')),
             DropdownMenuItem(value: _Period.yearly, child: Text('Yearly')),
           ],
           onChanged: (v) {
@@ -329,48 +325,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
           Icon(included ? Icons.check : Icons.close,
               color: included ? AppColors.success : AppColors.red, size: 20),
         ],
-      ),
-    );
-  }
-
-  Widget _trialToggle() {
-    return InkWell(
-      borderRadius: BorderRadius.circular(40),
-      onTap: () => setState(() {
-        _trial = !_trial;
-        if (_trial) _period = _Period.weekly;
-      }),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(40),
-          border: Border.all(color: Colors.black26, width: 1.4),
-        ),
-        child: Row(
-          children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Not sure yet?',
-                      style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16)),
-                  Text('Enable free trial',
-                      style: TextStyle(color: Colors.black54, fontSize: 13)),
-                ],
-              ),
-            ),
-            Switch(
-              value: _trial,
-              onChanged: (v) => setState(() {
-                _trial = v;
-                if (v) _period = _Period.weekly;
-              }),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -96,7 +96,20 @@ class CloudflareService {
     }
   }
 
-  http.MultipartRequest _buildRequest(List<CfInput> inputs, String prompt) {
+  /// Text-to-image (no input photo), e.g. AI backgrounds. [aspect] is
+  /// width / height of the result.
+  Future<Uint8List> generate(String prompt, {double aspect = 9 / 16}) async {
+    for (var attempt = 0;; attempt++) {
+      final r = await _send(_buildRequest(const [], prompt, aspect: aspect));
+      if (r.statusCode == 429 && attempt == 0) {
+        await Future<void>.delayed(const Duration(seconds: 15));
+        continue;
+      }
+      return _parse(r);
+    }
+  }
+
+  http.MultipartRequest _buildRequest(List<CfInput> inputs, String prompt, {double? aspect}) {
     final req = http.MultipartRequest('POST', Uri.parse(_endpoint));
     if (AppConfig.cfAppKey.isNotEmpty) {
       req.headers['x-app-key'] = AppConfig.cfAppKey;
@@ -105,11 +118,9 @@ class CloudflareService {
       req.files.add(http.MultipartFile.fromBytes('image', inputs[i].png,
           filename: 'input_$i.png'));
     }
-    final aspect = inputs.first.aspect;
-    final width =
-        aspect >= 1 ? _outputLongSide : _mult16(_outputLongSide * aspect);
-    final height =
-        aspect >= 1 ? _mult16(_outputLongSide / aspect) : _outputLongSide;
+    final a = aspect ?? (inputs.isEmpty ? 1.0 : inputs.first.aspect);
+    final width = a >= 1 ? _outputLongSide : _mult16(_outputLongSide * a);
+    final height = a >= 1 ? _mult16(_outputLongSide / a) : _outputLongSide;
     req.fields['prompt'] = prompt;
     req.fields['width'] = '$width';
     req.fields['height'] = '$height';

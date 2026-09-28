@@ -45,6 +45,19 @@ class AiModels {
     defaults: {'scale': 4, 'face_enhance': true},
   );
 
+  /// Stable Diffusion avatars from one face photo (InstantID).
+  static const avatar = AiModel(
+    owner: 'fofr',
+    name: 'face-to-many',
+    mediaKey: 'image',
+    defaults: {
+      'style': '3D',
+      'denoising_strength': 0.5,
+      'instant_id_strength': 0.8,
+      'prompt_strength': 4.5,
+    },
+  );
+
   /// Instruction-based image editing: AI Filters, AI Photos, Colorize.
   static const imageEdit = AiModel(
     owner: 'black-forest-labs',
@@ -65,5 +78,5 @@ class AiModels {
     defaults: {},
   );
 
-  static const all = [faceEnhance, upscale, imageEdit, videoEnhance];
+  static const all = [faceEnhance, upscale, imageEdit, avatar, videoEnhance];
 }

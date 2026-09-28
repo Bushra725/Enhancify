@@ -1,34 +1,52 @@
 import 'package:flutter/material.dart';
 
-/// Red / maroon palette.
+/// Pink palette built around #EA026A.
+///
+/// Field names are kept from the first version so every screen picks up the
+/// new colors automatically:
+///   red      -> primary pink (#EA026A)
+///   maroon   -> deep berry (pressed states, dark accents)
+///   gold     -> warm apricot accent (stars, highlights)
 class AppColors {
   AppColors._();
 
-  static const Color background = Color(0xFF0E0809);
-  static const Color surface = Color(0xFF1A1012);
-  static const Color surfaceHigh = Color(0xFF261619);
-  static const Color border = Color(0xFF3A2328);
+  // Dark-mode surfaces (light mode uses AppPalette.light below).
+  static const Color background = Color(0xFF14070E);
+  static const Color surface = Color(0xFF221019);
+  static const Color surfaceHigh = Color(0xFF301823);
+  static const Color border = Color(0xFF47273A);
 
-  static const Color maroon = Color(0xFF6E0F2A);
-  static const Color maroonDeep = Color(0xFF3D0715);
-  static const Color crimson = Color(0xFFC8102E);
-  static const Color red = Color(0xFFE8274B);
-  static const Color redLight = Color(0xFFFF5A78);
-  static const Color gold = Color(0xFFFFC53D);
+  static const Color primary = Color(0xFFEA026A);
+  static const Color maroon = Color(0xFFA3004B); // deep berry
+  static const Color maroonDeep = Color(0xFF5C0A33);
+  static const Color crimson = Color(0xFFC80059);
+  static const Color red = primary;
+  static const Color redLight = Color(0xFFFF5C9E);
+  static const Color blush = Color(0xFFFFE3EF);
+  static const Color lavender = Color(0xFFB892FF); // complementary accent
+  static const Color mint = Color(0xFF2EC4A6); // complementary accent
+  static const Color gold = Color(0xFFFFB547); // apricot
 
   static const Color textPrimary = Colors.white;
-  static const Color textSecondary = Color(0xFFB9A7AB);
-  static const Color textMuted = Color(0xFF7D6A6E);
-  static const Color success = Color(0xFF3DDC84);
+  static const Color textSecondary = Color(0xFFD8B9C7);
+  static const Color textMuted = Color(0xFF9C7C8B);
+  static const Color success = Color(0xFF22B573);
 
   static const LinearGradient brandGradient = LinearGradient(
-    colors: [red, maroon],
+    colors: [Color(0xFFFF4F97), primary, Color(0xFFB8005A)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient giftGradient = LinearGradient(
-    colors: [Color(0xFFB0123A), Color(0xFF5A0A2A), Color(0xFF2A0616)],
+    colors: [Color(0xFFFF5C9E), Color(0xFFEA026A), Color(0xFF8E0A55)],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
+  /// Soft background wash used on light screens.
+  static const LinearGradient blushGradient = LinearGradient(
+    colors: [Color(0xFFFFF4F9), Color(0xFFFFE3EF)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
@@ -58,13 +76,13 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
   static const light = AppPalette(
     brightness: Brightness.light,
-    background: Color(0xFFFFFFFF),
-    surface: Color(0xFFF7F2F3),
-    surfaceHigh: Color(0xFFEFE4E7),
-    border: Color(0xFFE3D4D8),
-    textPrimary: Color(0xFF1A1012),
-    textSecondary: Color(0xFF5C454B),
-    textMuted: Color(0xFF8A7378),
+    background: Color(0xFFFFFAFC),
+    surface: Color(0xFFFFF0F6),
+    surfaceHigh: Color(0xFFFFE1EE),
+    border: Color(0xFFF5CADC),
+    textPrimary: Color(0xFF2A0A1A),
+    textSecondary: Color(0xFF6B4658),
+    textMuted: Color(0xFF9E7A8B),
   );
 
   static const dark = AppPalette(
@@ -121,7 +139,7 @@ class AppTheme {
       useMaterial3: true,
       brightness: palette.brightness,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.crimson,
+        seedColor: AppColors.primary,
         brightness: palette.brightness,
         primary: AppColors.red,
         secondary: AppColors.maroon,

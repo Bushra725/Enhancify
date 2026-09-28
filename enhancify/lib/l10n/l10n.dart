@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../services/app_state.dart';
+import 'l10n_more.dart';
+import 'ui_extra.dart';
 
 /// UI copy for the languages offered in Settings.
 class Tr {
@@ -9,9 +11,7 @@ class Tr {
 
   final String code;
 
-  static const codes = ['en', 'ur', 'ar', 'es', 'hi', 'fr'];
-
-  static const names = {
+  static const _baseNames = {
     'en': 'English',
     'ur': 'اردو',
     'ar': 'العربية',
@@ -19,6 +19,9 @@ class Tr {
     'hi': 'हिन्दी',
     'fr': 'Français',
   };
+
+  static final Map<String, String> names = {..._baseNames, ...moreLanguageNames};
+  static final List<String> codes = names.keys.toList();
 
   static const _en = {
     'enhance': 'Enhance',
@@ -300,10 +303,54 @@ class Tr {
     },
   };
 
-  String call(String key) =>
-      _tables[code]?[key] ?? _en[key] ?? key;
+  static const flags = {
+    'en': '🇺🇸',
+    'ur': '🇵🇰',
+    'ar': '🇸🇦',
+    'es': '🇪🇸',
+    'hi': '🇮🇳',
+    'fr': '🇫🇷',
+    'de': '🇩🇪',
+    'it': '🇮🇹',
+    'pt': '🇧🇷',
+    'ru': '🇷🇺',
+    'tr': '🇹🇷',
+    'id': '🇮🇩',
+    'ms': '🇲🇾',
+    'bn': '🇧🇩',
+    'pa': '🇮🇳',
+    'fa': '🇮🇷',
+    'ps': '🇦🇫',
+    'zh': '🇨🇳',
+    'ja': '🇯🇵',
+    'ko': '🇰🇷',
+    'vi': '🇻🇳',
+    'th': '🇹🇭',
+    'ta': '🇮🇳',
+    'fil': '🇵🇭',
+    'sw': '🇰🇪',
+    'nl': '🇳🇱',
+    'pl': '🇵🇱',
+    'gu': '🇮🇳',
+    'mr': '🇮🇳',
+  };
 
-  static bool isRtl(String code) => code == 'ar' || code == 'ur';
+  String call(String key, [Map<String, String>? vars]) {
+    var s = _tables[code]?[key] ??
+        moreLanguageTables[code]?[key] ??
+        extraTables[code]?[key] ??
+        _en[key] ??
+        extraEn[key] ??
+        key;
+    if (vars != null) {
+      for (final e in vars.entries) {
+        s = s.replaceAll('{${e.key}}', e.value);
+      }
+    }
+    return s;
+  }
+
+  static bool isRtl(String code) => const {'ar', 'ur', 'fa', 'ps'}.contains(code);
 }
 
 extension TrX on BuildContext {

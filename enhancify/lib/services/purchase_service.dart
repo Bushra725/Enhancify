@@ -38,6 +38,10 @@ class PurchaseService extends ChangeNotifier {
   bool _sawActivePurchase = false;
 
   Future<void> init() async {
+    if (_prefs.getString(_kSource) == 'debug') {
+      await _state.setTier(SubscriptionTier.free);
+      await _prefs.remove(_kSource);
+    }
     try {
       available = await _iap.isAvailable();
     } catch (_) {
@@ -93,7 +97,9 @@ class PurchaseService extends ChangeNotifier {
   }
 
   SubscriptionTier _tierFor(String productId) {
-    if (productId == AppConfig.proWeekly || productId == AppConfig.proYearly) {
+    if (productId == AppConfig.proWeekly ||
+        productId == AppConfig.proMonthly ||
+        productId == AppConfig.proYearly) {
       return SubscriptionTier.pro;
     }
     if (productId == AppConfig.liteWeekly ||
@@ -201,13 +207,6 @@ class PurchaseService extends ChangeNotifier {
     final product =
         (trial ? trialOffers[productId] : null) ?? products[productId];
     if (!available || product == null) {
-      if (kDebugMode) {
-        // Lets you test Pro flows before the store products exist.
-        await _state.setTier(_tierFor(productId));
-        await _prefs.setString(_kSource, 'debug');
-        notifyListeners();
-        return null;
-      }
       return 'Store is not available right now. Please try again later.';
     }
     purchasing = true;

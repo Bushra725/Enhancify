@@ -40,7 +40,7 @@ const RATE_PER_MIN = Number(process.env.RATE_PER_MIN || 30);
 // lib/config/ai_models.dart).
 const ALLOWED_MODELS = new Set(
   (process.env.ALLOWED_MODELS ||
-    'sczhou/codeformer,nightmareai/real-esrgan,black-forest-labs/flux-kontext-pro,lucataco/real-esrgan-video')
+    'sczhou/codeformer,nightmareai/real-esrgan,black-forest-labs/flux-kontext-pro,fofr/face-to-many,lucataco/real-esrgan-video')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean),

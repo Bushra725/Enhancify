@@ -13,6 +13,8 @@ import '../../theme/app_theme.dart';
 import '../../widgets/before_after.dart';
 import '../../widgets/common.dart';
 import '../../widgets/processing_dialog.dart';
+import '../export/export_screen.dart';
+
 import '../paywall/paywall_screen.dart';
 import 'enhance_flow.dart';
 
@@ -130,9 +132,9 @@ class _ResultScreenState extends State<ResultScreen> {
         title: Text(widget.title),
         actions: [
           IconButton(
-            tooltip: 'Share',
+            tooltip: 'Share & post',
             icon: const Icon(Icons.ios_share_rounded),
-            onPressed: () => MediaService.shareFiles([_current]),
+            onPressed: () => ExportScreen.open(context, _current, showSave: false, title: 'Share & post'),
           ),
           const SizedBox(width: 4),
         ],
@@ -190,6 +192,10 @@ class _ResultScreenState extends State<ResultScreen> {
                 ],
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: SocialShareBar(file: _current),
+          ),
           SafeArea(
             top: false,
             child: Padding(

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart' hide AppState;
 
 import '../config/app_config.dart';
@@ -19,12 +20,17 @@ class AdsService {
 
   bool get _supported => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
-  AdRequest get _request =>
+  AdRequest get request =>
       AdRequest(nonPersonalizedAds: !_state.personalizedAdsConsent);
+
+  Future<void> ensureReady() => _ensureReady();
 
   Future<void> init() async {
     if (!_supported || !AppConfig.adsEnabled || _initialized) return;
     try {
+      await MobileAds.instance.updateRequestConfiguration(
+        RequestConfiguration(testDeviceIds: const []),
+      );
       await MobileAds.instance.initialize();
       _initialized = true;
       if (_state.showAds) {
@@ -43,13 +49,14 @@ class AdsService {
     }
     InterstitialAd.load(
       adUnitId: AppConfig.interstitialAdUnitId,
-      request: _request,
+      request: request,
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           _interstitial = ad;
           if (done != null && !done.isCompleted) done.complete();
         },
         onAdFailedToLoad: (err) {
+          debugPrint('Interstitial failed to load: $err');
           _interstitial = null;
           if (done != null && !done.isCompleted) done.complete();
         },
@@ -64,7 +71,7 @@ class AdsService {
     }
     RewardedAd.load(
       adUnitId: AppConfig.rewardedAdUnitId,
-      request: _request,
+      request: request,
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
           _rewarded = ad;
@@ -90,7 +97,7 @@ class AdsService {
     if (_interstitial == null) {
       final c = Completer<void>();
       _loadInterstitial(done: c);
-      await c.future.timeout(const Duration(seconds: 6), onTimeout: () {});
+      await c.future.timeout(const Duration(seconds: 8), onTimeout: () {});
     }
     final ad = _interstitial;
     if (ad == null) return;
@@ -142,5 +149,40 @@ class AdsService {
     await closed.future;
     _loadRewarded();
     return earned;
+  }
+}
+
+/// Shows a full-screen ad when the user leaves a feature screen.
+class ExitAdObserver extends NavigatorObserver {
+  ExitAdObserver(this.ads);
+
+  final AdsService ads;
+  bool _busy = false;
+
+  /// Edit, restore, enhance, collage, and the other full-screen tools.
+  static const features = {
+    'edit',
+    'restore',
+    'enhance',
+    'collage',
+    'remove',
+    'passport',
+    'gif',
+    'beauty',
+    'bg',
+    'music',
+  };
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (previousRoute == null || route is! PageRoute) return;
+    final name = route.settings.name;
+    if (name == null || !features.contains(name)) return;
+    if (_busy) return;
+    _busy = true;
+    // Wait until the screen underneath is visible, or Android drops the ad.
+    Future<void>.delayed(const Duration(milliseconds: 450), () {
+      ads.showInterstitial().whenComplete(() => _busy = false);
+    });
   }
 }

@@ -1,16 +1,19 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/app_config.dart';
 import '../../l10n/l10n.dart';
+import '../../services/ads_service.dart';
 import '../../services/app_state.dart';
 import '../../services/media_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/gallery_grid.dart';
+import '../collage/collage_screen.dart';
 import '../enhance/enhance_flow.dart';
 import '../paywall/paywall_screen.dart';
 import '../settings/settings_screen.dart';
@@ -23,7 +26,16 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _tool = 'enhance';
+  String _tool = 'home';
+
+  static const _quickTools = [
+    ('beauty', Icons.face_retouching_natural, 'beauty'),
+    ('bg', Icons.wallpaper, 'changeBg'),
+    ('remove', Icons.cleaning_services, 'removeObject'),
+    ('passport', Icons.badge_outlined, 'passport'),
+    ('gif', Icons.gif_box, 'makeGif'),
+    ('music', Icons.music_note, 'photoMusic'),
+  ];
 
   Future<File?> _openAsset(AssetEntity a) async {
     try {
@@ -41,15 +53,26 @@ class _HomeScreenState extends State<HomeScreen> {
     final file = await _openAsset(a);
     if (!mounted) return;
     if (file == null) {
-      showSnack(context, 'Could not open this item.');
+      showSnack(context, context.tr('couldNotOpen'));
       return;
     }
-    await startPhotoEnhance(context, file, tool: _tool);
+    await startPhotoEnhance(context, file, tool: _tool == 'home' ? 'edit' : _tool);
   }
 
   Future<void> _pickFromSystem() async {
+    if (_tool == 'collage') {
+      final files = await MediaService.pickImages(limit: 6);
+      if (files.isEmpty || !mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        settings: const RouteSettings(name: 'collage'),
+        builder: (_) => CollageScreen(initialPhotos: files),
+      ));
+      return;
+    }
     final f = await MediaService.pickImage();
-    if (f != null && mounted) await startPhotoEnhance(context, f, tool: _tool);
+    if (f != null && mounted) {
+      await startPhotoEnhance(context, f, tool: _tool == 'home' ? 'edit' : _tool);
+    }
   }
 
   @override
@@ -58,7 +81,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final tr = context.tr;
     final palette = context.palette;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        await context.read<AdsService>().showInterstitial();
+        await SystemNavigator.pop();
+      },
+      child: Scaffold(
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -111,6 +141,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                children: [
+                  for (final (id, icon, key) in _quickTools)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: ChoiceChip(
+                        avatar: Icon(icon, size: 16, color: _tool == id ? Colors.white : AppColors.primary),
+                        label: Text(tr(key)),
+                        selected: _tool == id,
+                        showCheckmark: false,
+                        selectedColor: AppColors.primary,
+                        labelStyle: TextStyle(
+                          color: _tool == id ? Colors.white : palette.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        onSelected: (_) {
+                          setState(() => _tool = _tool == id ? 'home' : id);
+                          if (_tool == id) showSnack(context, tr('pickFor', {'name': tr(key)}));
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
             Expanded(
               child: Stack(
                 children: [
@@ -118,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: GalleryGrid(
                       type: RequestType.image,
                       onTap: _onAsset,
-                      bottomPadding: 96 + bottomInset,
+                      bottomPadding: 84 + bottomInset,
                     ),
                   ),
                   Positioned(
@@ -127,11 +185,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     bottom: 0,
                     child: _BottomBar(
                       bottomInset: bottomInset,
-                      onEnhance: () => setState(() => _tool = 'enhance'),
-                      onRestore: () => setState(() => _tool = 'restore'),
-                      onCrop: () => setState(() => _tool = 'crop'),
-                      onRotate: () => setState(() => _tool = 'rotate'),
                       tool: _tool,
+                      onSelect: (tool) {
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        if (tool == 'collage') {
+                          Navigator.of(context).push(MaterialPageRoute(
+                            settings: const RouteSettings(name: 'collage'),
+                            builder: (_) => const CollageScreen(),
+                          ));
+                          return;
+                        }
+                        setState(() => _tool = tool);
+                      },
                     ),
                   ),
                 ],
@@ -139,6 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -181,18 +247,12 @@ class _TabPill extends StatelessWidget {
 class _BottomBar extends StatelessWidget {
   const _BottomBar({
     required this.bottomInset,
-    required this.onEnhance,
-    required this.onRestore,
-    required this.onCrop,
-    required this.onRotate,
+    required this.onSelect,
     required this.tool,
   });
 
   final double bottomInset;
-  final VoidCallback onEnhance;
-  final VoidCallback onRestore;
-  final VoidCallback onCrop;
-  final VoidCallback onRotate;
+  final ValueChanged<String> onSelect;
   final String tool;
 
   @override
@@ -204,7 +264,7 @@ class _BottomBar extends StatelessWidget {
             onTap: onTap,
             borderRadius: BorderRadius.circular(16),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 2),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -218,7 +278,7 @@ class _BottomBar extends StatelessWidget {
                     ),
                     child: Icon(icon, size: 22),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 2),
                   Text(label,
                       style: const TextStyle(
                           fontSize: 12, fontWeight: FontWeight.w600)),
@@ -229,7 +289,7 @@ class _BottomBar extends StatelessWidget {
         );
     final bg = context.palette.background;
     return Container(
-      padding: EdgeInsets.fromLTRB(8, 10, 8, 6 + bottomInset),
+      padding: EdgeInsets.fromLTRB(8, 4, 8, bottomInset + 2),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -244,10 +304,11 @@ class _BottomBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          item(Icons.auto_awesome, 'Enhance', onEnhance, active: tool == 'enhance'),
-          item(Icons.auto_fix_high, 'Restore', onRestore, active: tool == 'restore'),
-          item(Icons.crop, 'Crop', onCrop, active: tool == 'crop'),
-          item(Icons.rotate_right, 'Rotate', onRotate, active: tool == 'rotate'),
+          item(Icons.home_rounded, context.tr('home'), () => onSelect('home'), active: tool == 'home'),
+          item(Icons.edit_outlined, context.tr('edit'), () => onSelect('edit'), active: tool == 'edit'),
+          item(Icons.auto_fix_high, context.tr('restore'), () => onSelect('restore'), active: tool == 'restore'),
+          item(Icons.grid_view_rounded, context.tr('collage'), () => onSelect('collage'), active: tool == 'collage'),
+          item(Icons.auto_awesome, context.tr('enhance'), () => onSelect('enhance'), active: tool == 'enhance'),
         ],
       ),
     );

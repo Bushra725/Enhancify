@@ -47,13 +47,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.maroon, AppColors.maroonDeep, AppColors.background],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.blushGradient),
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -73,17 +67,24 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   ),
                 ),
                 const Spacer(),
-                const Text(
-                  'Take your\nphotos to new\nheights',
+                const Text.rich(
+                  TextSpan(children: [
+                    TextSpan(text: 'Take your\nphotos to new\n'),
+                    TextSpan(
+                        text: 'heights',
+                        style: TextStyle(color: AppColors.primary)),
+                  ]),
                   style: TextStyle(
                     fontSize: 40,
                     height: 1.1,
                     fontWeight: FontWeight.w900,
+                    color: Color(0xFF2A0A1A),
                   ),
                 ),
                 const SizedBox(height: 28),
                 PillButton(
                   label: context.tr('getStarted'),
+                  kind: ButtonStyleKind.brand,
                   loading: _loading,
                   onPressed: _start,
                   trailing: const Icon(Icons.arrow_forward_ios_rounded),
@@ -92,7 +93,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 Text.rich(
                   TextSpan(
                     style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 12.5),
+                        color: Color(0xFF6B4658), fontSize: 12.5),
                     children: [
                       const TextSpan(
                           text: 'By continuing, you accept our '),
@@ -101,7 +102,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         recognizer: _terms,
                         style: const TextStyle(
                             decoration: TextDecoration.underline,
-                            color: Colors.white),
+                            color: AppColors.primary),
                       ),
                       const TextSpan(
                           text: ' and acknowledge receipt of our '),
@@ -110,7 +111,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         recognizer: _privacy,
                         style: const TextStyle(
                             decoration: TextDecoration.underline,
-                            color: Colors.white),
+                            color: AppColors.primary),
                       ),
                       const TextSpan(text: '.'),
                     ],

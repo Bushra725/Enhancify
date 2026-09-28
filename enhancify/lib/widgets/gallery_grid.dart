@@ -26,7 +26,7 @@ class GalleryGrid extends StatefulWidget {
 }
 
 class _GalleryGridState extends State<GalleryGrid> with WidgetsBindingObserver {
-  static const _pageSize = 60;
+  static const _pageSize = 24;
 
   PermissionState? _perm;
   final List<AssetEntity> _items = [];
@@ -123,7 +123,8 @@ class _GalleryGridState extends State<GalleryGrid> with WidgetsBindingObserver {
     final gen = _generation;
     try {
       final page =
-          await MediaService.loadPage(widget.type, page: _page, size: _pageSize);
+          await MediaService.loadPage(widget.type, page: _page, size: _pageSize)
+              .timeout(const Duration(seconds: 8), onTimeout: () => <AssetEntity>[]);
       if (!mounted || gen != _generation) return;
       setState(() {
         _items.addAll(page);

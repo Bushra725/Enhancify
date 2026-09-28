@@ -41,6 +41,17 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Shares finished photos/videos straight to Instagram, Facebook... -->
+        <provider
+            android:name=".EnhancifyFileProvider"
+            android:authorities="${applicationId}.enhancify.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/enhancify_file_paths" />
+        </provider>
+
         <!-- Google's TEST AdMob app id. Replace with yours before release. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
@@ -60,5 +71,12 @@
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="mailto" />
         </intent>
+        <!-- Apps we can post to directly -->
+        <package android:name="com.instagram.android" />
+        <package android:name="com.facebook.katana" />
+        <package android:name="com.whatsapp" />
+        <package android:name="com.zhiliaoapp.musically" />
+        <package android:name="com.ss.android.ugc.trill" />
+        <package android:name="com.snapchat.android" />
     </queries>
 </manifest>

@@ -37,7 +37,7 @@ class PillButton extends StatelessWidget {
       ButtonStyleKind.white =>
         (Colors.black, Colors.white, null, Border.all(color: Colors.black12)),
       ButtonStyleKind.brand => (Colors.white, null, AppColors.brandGradient, null),
-      ButtonStyleKind.dark => (Colors.white, Colors.black, null, null),
+      ButtonStyleKind.dark => (Colors.white, AppColors.primary, null, null),
       ButtonStyleKind.outline => (
           Theme.of(context).brightness == Brightness.dark
               ? Colors.white
@@ -47,7 +47,7 @@ class PillButton extends StatelessWidget {
           Border.all(
               color: Theme.of(context).brightness == Brightness.dark
                   ? AppColors.border
-                  : const Color(0xFFE3D4D8),
+                  : const Color(0xFFF5CADC),
               width: 1.4)
         ),
     };

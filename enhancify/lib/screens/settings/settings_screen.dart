@@ -25,7 +25,7 @@ class SettingsScreen extends StatelessWidget {
   Future<void> _url(BuildContext context, String url) async {
     final ok = await launchUrl(Uri.parse(url),
         mode: LaunchMode.externalApplication);
-    if (!ok && context.mounted) showSnack(context, 'Could not open link.');
+    if (!ok && context.mounted) showSnack(context, context.tr('couldNotOpenLink'));
   }
 
   Future<void> _email(BuildContext context, String subject) async {
@@ -33,7 +33,7 @@ class SettingsScreen extends StatelessWidget {
         '?subject=${Uri.encodeComponent(subject)}');
     final ok = await launchUrl(uri);
     if (!ok && context.mounted) {
-      showSnack(context, 'Email us at ${AppConfig.supportEmail}');
+      showSnack(context, context.tr('emailUs', {'email': AppConfig.supportEmail}));
     }
   }
 
@@ -43,20 +43,20 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ctx.palette.surface,
-        title: const Text('Use Redeem Code'),
+        title: Text(context.tr('redeemTitle')),
         content: TextField(
           controller: controller,
           autofocus: true,
           textCapitalization: TextCapitalization.characters,
-          decoration: const InputDecoration(hintText: 'Enter your code'),
+          decoration: InputDecoration(hintText: context.tr('enterCode')),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              child: Text(context.tr('cancel'))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('Redeem')),
+              child: Text(context.tr('redeem'))),
         ],
       ),
     );
@@ -74,20 +74,20 @@ class SettingsScreen extends StatelessWidget {
   Future<void> _permissions(BuildContext context) async {
     final ps = await MediaService.galleryPermissionState();
     if (!context.mounted) return;
+    final tr = context.tr;
     final label = switch (ps) {
-      PermissionState.authorized => 'Full access',
-      PermissionState.limited => 'Limited access',
-      PermissionState.denied => 'Denied',
-      PermissionState.restricted => 'Restricted',
-      PermissionState.notDetermined => 'Not asked yet',
+      PermissionState.authorized => tr('fullAccess'),
+      PermissionState.limited => tr('limitedAccess'),
+      PermissionState.denied => tr('denied'),
+      PermissionState.restricted => tr('restricted'),
+      PermissionState.notDetermined => tr('notAsked'),
     };
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ctx.palette.surface,
-        title: const Text('Photos Permissions'),
-        content: Text('Current access: $label\n\n'
-            '${AppConfig.appName} only reads the photos you choose to enhance.'),
+        title: Text(tr('photosPermissions')),
+        content: Text(tr('permExplain', {'access': label})),
         actions: [
           if (ps == PermissionState.limited)
             TextButton(
@@ -95,7 +95,7 @@ class SettingsScreen extends StatelessWidget {
                 Navigator.pop(ctx);
                 await MediaService.presentLimited();
               },
-              child: const Text('Select photos'),
+              child: Text(tr('selectPhotos')),
             ),
           TextButton(
             onPressed: () async {
@@ -107,8 +107,8 @@ class SettingsScreen extends StatelessWidget {
               }
             },
             child: Text(ps == PermissionState.notDetermined
-                ? 'Allow access'
-                : 'Open Settings'),
+                ? tr('allowAccess')
+                : tr('openSettings')),
           ),
         ],
       ),
@@ -131,8 +131,8 @@ class SettingsScreen extends StatelessWidget {
         children: [
           _ProCard(isPro: state.isPro, tier: state.tier),
           const _AppearanceCard(),
-          _Group('Social', [
-            const _Item(Icons.share_outlined, 'Share App',
+          _Group(context.tr('social'), [
+            _Item(Icons.share_outlined, context.tr('shareApp'),
                 onTap: MediaService.shareApp),
             _Item(Icons.camera_alt_outlined, 'Instagram',
                 external: true,
@@ -144,46 +144,46 @@ class SettingsScreen extends StatelessWidget {
                 external: true,
                 onTap: () => _url(context, AppConfig.tiktokUrl)),
           ]),
-          _Group('Help', [
-            _Item(Icons.help_outline, 'Help Center',
+          _Group(context.tr('help'), [
+            _Item(Icons.help_outline, context.tr('helpCenter'),
                 external: true,
                 onTap: () => _url(context, AppConfig.helpCenterUrl)),
-            _Item(Icons.support_agent_outlined, 'Contact Support',
+            _Item(Icons.support_agent_outlined, context.tr('contactSupport'),
                 external: true,
                 onTap: () => _email(context, '${AppConfig.appName} support')),
-            _Item(Icons.lightbulb_outline, 'Suggest A Feature',
+            _Item(Icons.lightbulb_outline, context.tr('suggestFeature'),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const SuggestFeatureScreen()))),
-            _Item(Icons.receipt_long_outlined, 'Subscription Info',
+            _Item(Icons.receipt_long_outlined, context.tr('subscriptionInfo'),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const SubscriptionInfoScreen()))),
-            _Item(Icons.redeem_outlined, 'Use Redeem Code',
+            _Item(Icons.redeem_outlined, context.tr('useRedeem'),
                 onTap: () => _redeem(context)),
           ]),
-          _Group('General', [
-            _Item(Icons.photo_library_outlined, 'Photos Permissions',
+          _Group(context.tr('general'), [
+            _Item(Icons.photo_library_outlined, context.tr('photosPermissions'),
                 onTap: () => _permissions(context)),
-            _Item(Icons.tune, 'Enhancer Preferences',
+            _Item(Icons.tune, context.tr('enhancerPreferences'),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const EnhancerPreferencesScreen()))),
           ]),
-          _Group('Legal', [
-            _Item(Icons.description_outlined, 'Terms of Service',
+          _Group(context.tr('legal'), [
+            _Item(Icons.description_outlined, context.tr('terms'),
                 external: true, onTap: () => _url(context, AppConfig.termsUrl)),
-            _Item(Icons.privacy_tip_outlined, 'Privacy Policy',
+            _Item(Icons.privacy_tip_outlined, context.tr('privacy'),
                 external: true,
                 onTap: () => _url(context, AppConfig.privacyUrl)),
-            _Item(Icons.shield_outlined, 'Privacy Preferences',
+            _Item(Icons.shield_outlined, context.tr('privacyPreferences'),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const PrivacyPreferencesScreen()))),
-            _Item(Icons.code, 'Open Source Libraries',
+            _Item(Icons.code, context.tr('openSource'),
                 onTap: () => showLicensePage(
                     context: context,
                     applicationName: AppConfig.appName)),
           ]),
           const SizedBox(height: 16),
           Center(
-            child: Text('${AppConfig.appName} v1.0.0',
+            child: Text('${AppConfig.appName} v1.3.0',
                 style: TextStyle(color: context.palette.textMuted, fontSize: 12)),
           ),
         ],
@@ -228,21 +228,34 @@ class _AppearanceCard extends StatelessWidget {
     final state = context.read<AppState>();
     final code = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final c in Tr.codes)
-              ListTile(
-                title: Text(Tr.names[c] ?? c),
-                trailing: state.languageCode == c
-                    ? const Icon(Icons.check, color: AppColors.red)
-                    : null,
-                onTap: () => Navigator.pop(ctx, c),
-              ),
-          ],
-        ),
-      ),
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        final height = MediaQuery.sizeOf(ctx).height * 0.72;
+        return SafeArea(
+          child: SizedBox(
+            height: height,
+            child: ListView(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                  child: Text(ctx.tr('language'),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                ),
+                for (final c in Tr.codes)
+                  ListTile(
+                    leading: Text(Tr.flags[c] ?? '🏳️', style: const TextStyle(fontSize: 26)),
+                    title: Text(Tr.names[c] ?? c),
+                    trailing: state.languageCode == c
+                        ? const Icon(Icons.check, color: AppColors.red)
+                        : null,
+                    onTap: () => Navigator.pop(ctx, c),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
     if (code != null) await state.setLanguage(code);
   }
@@ -271,7 +284,7 @@ class _ProCard extends StatelessWidget {
               children: [
                 Text(
                   isPro
-                      ? 'You are Pro 👑'
+                      ? context.tr('youArePro')
                       : tier == SubscriptionTier.lite
                           ? '${AppConfig.appName} Lite'
                           : AppConfig.proName,
@@ -281,10 +294,10 @@ class _ProCard extends StatelessWidget {
                       fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 8),
-                for (final t in const [
-                  'Unlimited saves',
-                  'Multiple results',
-                  'No ads',
+                for (final t in [
+                  context.tr('unlimitedSaves'),
+                  context.tr('multipleResults'),
+                  context.tr('noAds'),
                 ])
                   Padding(
                     padding: const EdgeInsets.only(bottom: 3),
@@ -304,8 +317,8 @@ class _ProCard extends StatelessWidget {
                     width: 150,
                     child: PillButton(
                       label: tier == SubscriptionTier.lite
-                          ? 'Upgrade'
-                          : 'Try Pro Now',
+                          ? context.tr('upgrade')
+                          : context.tr('tryPro'),
                       kind: ButtonStyleKind.dark,
                       height: 46,
                       onPressed: () => openPaywall(context),
