@@ -1,7 +1,7 @@
 name: enhancify
 description: Enhancify - AI photo enhancer, AI photos and AI filters.
 publish_to: 'none'
-version: 1.8.0+12
+version: 1.8.3+15
 
 environment:
   sdk: '>=3.6.0 <4.0.0'
@@ -17,8 +17,6 @@ dependencies:
   http: ^1.2.2
   path_provider: ^2.1.4
   path: ^1.9.0
-  photo_manager: ^3.5.0
-  photo_manager_image_provider: ^2.1.1
   image_picker: ^1.1.2
   flutter_image_compress: ^2.3.0
   gal: ^2.3.0

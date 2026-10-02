@@ -3,73 +3,32 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:gal/gal.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:photo_manager/photo_manager.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../config/app_config.dart';
 
-/// Gallery access, saving and sharing.
+/// Gallery access via the **system photo picker**, plus save/share.
+/// Does not use READ_MEDIA_IMAGES / READ_MEDIA_VIDEO (Play photo policy).
 class MediaService {
   MediaService._();
 
   static final ImagePicker _picker = ImagePicker();
 
-  // ------------------------------------------------------------- gallery
-  static Future<PermissionState> requestGalleryPermission() {
-    return PhotoManager.requestPermissionExtend(
-      requestOption: const PermissionRequestOption(
-        androidPermission: AndroidPermission(
-          type: RequestType.common,
-          mediaLocation: false,
-        ),
-      ),
-    );
-  }
-
-  static Future<PermissionState> galleryPermissionState() {
-    return PhotoManager.getPermissionState(
-      requestOption: const PermissionRequestOption(
-        androidPermission: AndroidPermission(
-          type: RequestType.common,
-          mediaLocation: false,
-        ),
-      ),
-    ).timeout(const Duration(seconds: 6), onTimeout: () => PermissionState.denied);
-  }
-
-  static Future<void> openSettings() => PhotoManager.openSetting();
-
-  static Future<void> presentLimited() async {
-    try {
-      await PhotoManager.presentLimited();
-    } catch (_) {}
-  }
-
-  /// Loads a page of the "Recent" album for the given type.
-  static Future<List<AssetEntity>> loadPage(
-    RequestType type, {
-    required int page,
-    int size = 60,
-  }) async {
-    final paths = await PhotoManager.getAssetPathList(
-      type: type,
-      onlyAll: true,
-      filterOption: FilterOptionGroup(
-        orders: [const OrderOption(type: OrderOptionType.createDate)],
-      ),
-    );
-    if (paths.isEmpty) return [];
-    return paths.first.getAssetListPaged(page: page, size: size);
-  }
-
   // -------------------------------------------------------------- picker
+  /// System photo picker — no READ_MEDIA_* permission on Android 13+.
   static Future<File?> pickImage() async {
-    final x = await _picker.pickImage(source: ImageSource.gallery);
+    final x = await _picker.pickImage(
+      source: ImageSource.gallery,
+      requestFullMetadata: false,
+    );
     return x == null ? null : File(x.path);
   }
 
   static Future<List<File>> pickImages({int limit = 8}) async {
-    final xs = await _picker.pickMultiImage(limit: limit < 2 ? 2 : limit);
+    final xs = await _picker.pickMultiImage(
+      limit: limit < 2 ? 2 : limit,
+      requestFullMetadata: false,
+    );
     return xs.take(limit).map((x) => File(x.path)).toList();
   }
 

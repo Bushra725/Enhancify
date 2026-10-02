@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/app_config.dart';
@@ -13,7 +12,7 @@ import '../../services/media_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/bottom_banner.dart';
 import '../../widgets/common.dart';
-import '../../widgets/gallery_grid.dart';
+import '../../widgets/picker_gallery.dart';
 import '../collage/collage_screen.dart';
 import '../enhance/enhance_flow.dart';
 import '../paywall/paywall_screen.dart';
@@ -28,6 +27,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _tool = 'home';
+  final _galleryKey = GlobalKey<PickerGalleryState>();
 
   static const _quickTools = [
     ('beauty', Icons.face_retouching_natural, 'beauty'),
@@ -38,25 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ('music', Icons.music_note, 'photoMusic'),
   ];
 
-  Future<File?> _openAsset(AssetEntity a) async {
-    try {
-      final direct = await a.file;
-      if (direct != null) return direct;
-    } catch (_) {}
-    try {
-      return await a.originFile;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> _onAsset(AssetEntity a) async {
-    final file = await _openAsset(a);
-    if (!mounted) return;
-    if (file == null) {
-      showSnack(context, context.tr('couldNotOpen'));
-      return;
-    }
+  Future<void> _onFile(File file) async {
     await startPhotoEnhance(context, file, tool: _tool == 'home' ? 'edit' : _tool);
   }
 
@@ -70,10 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ));
       return;
     }
-    final f = await MediaService.pickImage();
-    if (f != null && mounted) {
-      await startPhotoEnhance(context, f, tool: _tool == 'home' ? 'edit' : _tool);
-    }
+    await _galleryKey.currentState?.pickOne();
   }
 
   @override
@@ -129,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _TabPill(
                     label: tr('photos'),
                     selected: true,
-                    onTap: () {},
+                    onTap: () => _galleryKey.currentState?.pickMore(),
                   ),
                   const Spacer(),
                   IconButton.filledTonal(
@@ -174,9 +153,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: GalleryGrid(
-                      type: RequestType.image,
-                      onTap: _onAsset,
+                    child: PickerGallery(
+                      key: _galleryKey,
+                      onOpen: _onFile,
                       bottomPadding: 84 + bottomInset + (state.showAds ? 54 : 0),
                     ),
                   ),

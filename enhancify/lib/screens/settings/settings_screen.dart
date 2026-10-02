@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -13,7 +12,6 @@ import '../../services/media_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/illustrations.dart';
-import '../../widgets/permission_rationale.dart';
 import '../paywall/paywall_screen.dart';
 import 'enhancer_preferences_screen.dart';
 import 'privacy_preferences_screen.dart';
@@ -73,48 +71,28 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _permissions(BuildContext context) async {
-    final ps = await MediaService.galleryPermissionState();
-    if (!context.mounted) return;
     final tr = context.tr;
-    final label = switch (ps) {
-      PermissionState.authorized => tr('fullAccess'),
-      PermissionState.limited => tr('limitedAccess'),
-      PermissionState.denied => tr('denied'),
-      PermissionState.restricted => tr('restricted'),
-      PermissionState.notDetermined => tr('notAsked'),
-    };
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ctx.palette.surface,
         title: Text(tr('photosPermissions')),
-        content: Text(tr('permExplain', {'access': label})),
+        content: Text(
+          '${AppConfig.appName} opens your photos and videos with the '
+          'system photo picker. It does not request broad gallery access. '
+          'When you save, the app only writes the result you choose.',
+        ),
         actions: [
-          if (ps == PermissionState.limited)
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                await MediaService.presentLimited();
-              },
-              child: Text(tr('selectPhotos')),
-            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(tr('cancel')),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              if (ps == PermissionState.notDetermined) {
-                final proceed = await showMediaAccessRationale(
-                  context,
-                  kind: MediaAccessKind.photosAndVideos,
-                );
-                if (!proceed) return;
-                await MediaService.requestGalleryPermission();
-              } else {
-                await MediaService.openSettings();
-              }
+              await MediaService.pickImage();
             },
-            child: Text(ps == PermissionState.notDetermined
-                ? tr('allowAccess')
-                : tr('openSettings')),
+            child: Text(tr('selectPhotos')),
           ),
         ],
       ),
