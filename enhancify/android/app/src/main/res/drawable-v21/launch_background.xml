@@ -3,14 +3,12 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#FFFFF4F9" />
+            <gradient
+                android:angle="270"
+                android:startColor="#FFFFF4F9"
+                android:centerColor="#FFFFE0EE"
+                android:endColor="#FFFFC8E0"
+                android:type="linear" />
         </shape>
     </item>
-
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
 </layer-list>

@@ -11,6 +11,7 @@ import '../../services/ads_service.dart';
 import '../../services/app_state.dart';
 import '../../services/media_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/bottom_banner.dart';
 import '../../widgets/common.dart';
 import '../../widgets/gallery_grid.dart';
 import '../collage/collage_screen.dart';
@@ -176,27 +177,33 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: GalleryGrid(
                       type: RequestType.image,
                       onTap: _onAsset,
-                      bottomPadding: 84 + bottomInset,
+                      bottomPadding: 84 + bottomInset + (state.showAds ? 54 : 0),
                     ),
                   ),
                   Positioned(
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    child: _BottomBar(
-                      bottomInset: bottomInset,
-                      tool: _tool,
-                      onSelect: (tool) {
-                        Navigator.of(context).popUntil((route) => route.isFirst);
-                        if (tool == 'collage') {
-                          Navigator.of(context).push(MaterialPageRoute(
-                            settings: const RouteSettings(name: 'collage'),
-                            builder: (_) => const CollageScreen(),
-                          ));
-                          return;
-                        }
-                        setState(() => _tool = tool);
-                      },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (state.showAds) const Center(child: BottomBannerAd()),
+                        _BottomBar(
+                          bottomInset: bottomInset,
+                          tool: _tool,
+                          onSelect: (tool) {
+                            Navigator.of(context).popUntil((route) => route.isFirst);
+                            if (tool == 'collage') {
+                              Navigator.of(context).push(MaterialPageRoute(
+                                settings: const RouteSettings(name: 'collage'),
+                                builder: (_) => const CollageScreen(),
+                              ));
+                              return;
+                            }
+                            setState(() => _tool = tool);
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ],

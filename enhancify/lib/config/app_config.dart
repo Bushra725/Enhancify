@@ -15,14 +15,19 @@ class AppConfig {
   // ---------------------------------------------------------------- branding
   static const String appName = 'Enhancify';
   static const String proName = 'Enhancify Pro';
-  static const String supportEmail = 'support@theoccess.com';
-  static const String helpCenterUrl = 'https://theoccess.com/enhancify/help';
-  static const String termsUrl = 'https://theoccess.com/enhancify/terms';
-  static const String privacyUrl = 'https://theoccess.com/enhancify/privacy';
+  static const String supportEmail = 'MobAppsInc11@gmail.com';
+  /// Legal pages hosted by the publisher (Mob Apps Inc).
+  static const String privacyUrl =
+      'https://sites.google.com/view/mob-apps-inc/privacy-policy';
+  /// No separate Terms page is published yet — Privacy Policy covers use.
+  static const String termsUrl = privacyUrl;
+  static const String helpCenterUrl = privacyUrl;
+  static const String appVersionLabel = '1.8.0';
   static const String instagramUrl = 'https://instagram.com/';
   static const String facebookUrl = 'https://facebook.com/';
   static const String tiktokUrl = 'https://tiktok.com/';
-  static const String androidPackage = 'com.theoccess.enhancify';
+  static const String androidPackage =
+      'com.mai.photo.editor.app.picture.face.art.lab';
   static const String playStoreUrl =
       'https://play.google.com/store/apps/details?id=$androidPackage';
   static const String appStoreUrl = 'https://apps.apple.com/app/id0000000000';
@@ -106,26 +111,54 @@ class AppConfig {
   };
 
   // --------------------------------------------------------------- AdMob
-  // These are Google's official TEST ids. Replace with your own before
-  // release (and also the APPLICATION_ID in AndroidManifest / Info.plist).
+  // Production AdMob units (Mob Apps Inc). Used in release / Play builds.
+  // Debug uses Google's sample units so ads always load on device while
+  // new production units still return "no fill" (error 3).
   static const bool adsEnabled = true;
+  static const String androidAdMobAppId =
+      'ca-app-pub-9297250663056879~7232608900';
+
+  /// True in local debug installs. Release AAB/APK always uses production IDs.
+  static bool get useSampleAdUnits => kDebugMode;
 
   static String get interstitialAdUnitId {
     if (kIsWeb) return '';
-    if (Platform.isAndroid) return 'ca-app-pub-3940256099942544/1033173712';
-    return 'ca-app-pub-3940256099942544/4411468910';
+    if (useSampleAdUnits) {
+      return 'ca-app-pub-3940256099942544/1033173712';
+    }
+    return 'ca-app-pub-9297250663056879/2467163463';
   }
 
   static String get rewardedAdUnitId {
     if (kIsWeb) return '';
-    if (Platform.isAndroid) return 'ca-app-pub-3940256099942544/5224354917';
-    return 'ca-app-pub-3940256099942544/1712485313';
+    if (useSampleAdUnits) {
+      return 'ca-app-pub-3940256099942544/5224354917';
+    }
+    return 'ca-app-pub-9297250663056879/4654343100';
   }
 
   static String get bannerAdUnitId {
     if (kIsWeb) return '';
-    if (Platform.isAndroid) return 'ca-app-pub-3940256099942544/6300978111';
-    return 'ca-app-pub-3940256099942544/2934735716';
+    if (useSampleAdUnits) {
+      return 'ca-app-pub-3940256099942544/6300978111';
+    }
+    return 'ca-app-pub-9297250663056879/7719490148';
+  }
+
+  static String get appOpenAdUnitId {
+    if (kIsWeb) return '';
+    if (useSampleAdUnits) {
+      return 'ca-app-pub-3940256099942544/9257395921';
+    }
+    return 'ca-app-pub-9297250663056879/1914884724';
+  }
+
+  static String get nativeAdUnitId {
+    if (kIsWeb) return '';
+    if (useSampleAdUnits) {
+      return 'ca-app-pub-3940256099942544/2247696110';
+    }
+    return 'ca-app-pub-9297250663056879/7788074228';
   }
 
   static String get storeUrl {

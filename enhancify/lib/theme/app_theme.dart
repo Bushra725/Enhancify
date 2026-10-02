@@ -33,9 +33,9 @@ class AppColors {
   static const Color success = Color(0xFF22B573);
 
   static const LinearGradient brandGradient = LinearGradient(
-    colors: [Color(0xFFFF4F97), primary, Color(0xFFB8005A)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+    colors: [Color(0xFFFF5C9E), Color(0xFFEA026A), Color(0xFFB8005A)],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
   );
 
   static const LinearGradient giftGradient = LinearGradient(
@@ -44,11 +44,36 @@ class AppColors {
     end: Alignment.bottomCenter,
   );
 
-  /// Soft background wash used on light screens.
+  /// Soft pink wash for screen backgrounds (matches the app icon).
   static const LinearGradient blushGradient = LinearGradient(
-    colors: [Color(0xFFFFF4F9), Color(0xFFFFE3EF)],
+    colors: [
+      Color(0xFFFFF7FB),
+      Color(0xFFFFE3EF),
+      Color(0xFFFFD0E4),
+    ],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
+  );
+
+  /// Stronger brand wash used behind the whole app shell.
+  static const LinearGradient screenGradient = LinearGradient(
+    colors: [
+      Color(0xFFFFF4F9),
+      Color(0xFFFFE0EE),
+      Color(0xFFFFC8E0),
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient screenGradientDark = LinearGradient(
+    colors: [
+      Color(0xFF1A0A12),
+      Color(0xFF2A1020),
+      Color(0xFF3A0F28),
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
   );
 }
 
@@ -148,14 +173,14 @@ class AppTheme {
       ),
     );
     return base.copyWith(
-      scaffoldBackgroundColor: palette.background,
+      scaffoldBackgroundColor: Colors.transparent,
       extensions: [palette],
       textTheme: base.textTheme.apply(
         bodyColor: palette.textPrimary,
         displayColor: palette.textPrimary,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: palette.background,
+        backgroundColor: Colors.transparent,
         foregroundColor: palette.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,

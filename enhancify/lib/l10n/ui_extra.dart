@@ -123,7 +123,8 @@ const extraEn = <String, String>{
   'denied': 'Denied',
   'restricted': 'Restricted',
   'notAsked': 'Not asked yet',
-  'permExplain': 'Current access: {access}\n\nEnhancify only reads the photos you choose.',
+  'permExplain':
+      'Current access: {access}\n\nEnhancify uses photo and video access so you can enhance, edit, restore, collage, and save results. Media stays on your device unless you use an optional cloud AI feature.',
   'selectPhotos': 'Select photos',
   'allowAccess': 'Allow access',
   'openSettings': 'Open Settings',

@@ -13,6 +13,7 @@ import '../../services/media_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/illustrations.dart';
+import '../../widgets/permission_rationale.dart';
 import '../paywall/paywall_screen.dart';
 import 'enhancer_preferences_screen.dart';
 import 'privacy_preferences_screen.dart';
@@ -101,6 +102,11 @@ class SettingsScreen extends StatelessWidget {
             onPressed: () async {
               Navigator.pop(ctx);
               if (ps == PermissionState.notDetermined) {
+                final proceed = await showMediaAccessRationale(
+                  context,
+                  kind: MediaAccessKind.photosAndVideos,
+                );
+                if (!proceed) return;
                 await MediaService.requestGalleryPermission();
               } else {
                 await MediaService.openSettings();
@@ -183,7 +189,7 @@ class SettingsScreen extends StatelessWidget {
           ]),
           const SizedBox(height: 16),
           Center(
-            child: Text('${AppConfig.appName} v1.3.0',
+            child: Text('${AppConfig.appName} v${AppConfig.appVersionLabel}',
                 style: TextStyle(color: context.palette.textMuted, fontSize: 12)),
           ),
         ],

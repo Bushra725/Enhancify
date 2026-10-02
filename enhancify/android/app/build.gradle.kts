@@ -5,8 +5,17 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+import java.util.Properties
+import java.io.FileInputStream
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    namespace = "com.theoccess.enhancify"
+    namespace = "com.mai.photo.editor.app.picture.face.art.lab"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -16,31 +25,56 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.theoccess.enhancify"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.mai.photo.editor.app.picture.face.art.lab"
+        // google_mobile_ads 9.x requires 24; unchanged vs previous Play release.
         minSdk = 24
         targetSdk = flutter.targetSdkVersion
-        // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
-        // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
-        // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
-        // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Do NOT set ndk.abiFilters — Play App Bundles deliver per-ABI splits.
+        // Filtering to ARM-only dropped ~1k devices vs the prior release.
+        // Keep dependency language packs aligned with in-app languages.
+        resourceConfigurations += listOf(
+            "en", "ur", "ar", "es", "hi", "fr",
+            "de", "it", "pt", "ru", "tr", "id", "ms",
+            "bn", "pa", "fa", "ps", "zh", "ja", "ko",
+            "vi", "th", "ta", "fil", "sw", "nl", "pl", "gu", "mr",
+        )
+    }
+
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 
     packaging {
         jniLibs {
             pickFirsts += "**/libc++_shared.so"
+            // Compress .so in delivered APKs — smaller Play downloads (OpenCV is large).
+            useLegacyPackaging = true
         }
     }
 }

@@ -80,7 +80,6 @@ class _EnhancifyAppState extends State<EnhancifyApp> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final light = state.themeMode != ThemeMode.dark;
     final rtl = Tr.isRtl(state.languageCode);
     return MaterialApp(
       title: AppConfig.appName,
@@ -101,16 +100,22 @@ class _EnhancifyAppState extends State<EnhancifyApp> {
       navigatorObservers: [_exitAds],
       builder: (context, child) {
         final palette = context.palette;
+        final light = state.themeMode != ThemeMode.dark;
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
             statusBarIconBrightness: light ? Brightness.dark : Brightness.light,
-            systemNavigationBarColor: palette.background,
+            systemNavigationBarColor: light ? const Color(0xFFFFC8E0) : palette.background,
             systemNavigationBarIconBrightness: light ? Brightness.dark : Brightness.light,
           ),
           child: Directionality(
             textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-            child: child ?? const SizedBox.shrink(),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: light ? AppColors.screenGradient : AppColors.screenGradientDark,
+              ),
+              child: child ?? const SizedBox.shrink(),
+            ),
           ),
         );
       },

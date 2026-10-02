@@ -6,6 +6,7 @@ import '../config/app_config.dart';
 import '../services/media_service.dart';
 import '../theme/app_theme.dart';
 import 'common.dart';
+import 'permission_rationale.dart';
 
 /// Recent photos or videos from the device, with permission handling and
 /// infinite scroll.
@@ -79,6 +80,13 @@ class _GalleryGridState extends State<GalleryGrid> with WidgetsBindingObserver {
       if (p.hasAccess && (changed || _items.isEmpty)) _reload();
       if (p == PermissionState.notDetermined && !_askedOnce) {
         _askedOnce = true;
+        final kind = widget.type == RequestType.video
+            ? MediaAccessKind.videos
+            : widget.type == RequestType.image
+                ? MediaAccessKind.photos
+                : MediaAccessKind.photosAndVideos;
+        final proceed = await showMediaAccessRationale(context, kind: kind);
+        if (!mounted || !proceed) return;
         final r = await MediaService.requestGalleryPermission();
         if (!mounted) return;
         setState(() => _perm = r);
@@ -90,6 +98,13 @@ class _GalleryGridState extends State<GalleryGrid> with WidgetsBindingObserver {
   }
 
   Future<void> _request() async {
+    final kind = widget.type == RequestType.video
+        ? MediaAccessKind.videos
+        : widget.type == RequestType.image
+            ? MediaAccessKind.photos
+            : MediaAccessKind.photosAndVideos;
+    final proceed = await showMediaAccessRationale(context, kind: kind);
+    if (!mounted || !proceed) return;
     final p = await MediaService.requestGalleryPermission();
     if (!mounted) return;
     setState(() => _perm = p);
@@ -251,8 +266,12 @@ class _GalleryGridState extends State<GalleryGrid> with WidgetsBindingObserver {
             Icon(Icons.info_outline, color: context.palette.textSecondary),
             const SizedBox(height: 12),
             Text(
-              'To enhance, ${AppConfig.appName} needs access to your '
-              '${widget.type == RequestType.video ? 'videos' : 'photos'}.',
+              widget.type == RequestType.video
+                  ? '${AppConfig.appName} needs video access to enhance clips '
+                      'you choose and save improved videos to your gallery.'
+                  : '${AppConfig.appName} needs photo access to enhance, edit, '
+                      'restore, and collage images you choose, then save '
+                      'results to your gallery.',
               textAlign: TextAlign.center,
               style: TextStyle(color: context.palette.textSecondary),
             ),

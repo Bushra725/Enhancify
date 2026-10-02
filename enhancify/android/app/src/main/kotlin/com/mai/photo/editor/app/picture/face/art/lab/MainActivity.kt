@@ -1,4 +1,4 @@
-package com.theoccess.enhancify
+package com.mai.photo.editor.app.picture.face.art.lab
 
 import android.content.ActivityNotFoundException
 import android.content.Intent

@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../config/app_config.dart';
 import '../../l10n/l10n.dart';
+import '../../services/ads_service.dart';
 import '../../theme/app_theme.dart';
 import '../home/home_screen.dart';
 import 'onboarding_screen.dart';
@@ -31,7 +33,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     Future<void>.delayed(const Duration(milliseconds: 2300), _next);
   }
 
-  void _next() {
+  void _next() async {
+    if (!mounted) return;
+    // Give AdMob a moment to finish the first load before the app-open request.
+    final ads = context.read<AdsService>();
+    await ads.ensureReady();
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+    try {
+      await ads.showAppOpen();
+    } catch (_) {}
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
@@ -57,13 +68,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final rise = Tween<double>(begin: 24, end: 0).animate(fade);
     return Scaffold(
       body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFFFF7FB), Color(0xFFFFD6E8), Color(0xFFFFF4F9)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.screenGradient),
         child: Stack(
           children: [
             const _SparkleField(),
@@ -83,21 +88,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 112,
-                      height: 112,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: AppColors.brandGradient,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.35),
-                            blurRadius: 28,
-                            offset: const Offset(0, 12),
-                          ),
-                        ],
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: Image.asset(
+                        'assets/icon/icon.webp',
+                        width: 112,
+                        height: 112,
+                        fit: BoxFit.cover,
                       ),
-                      child: const Icon(Icons.auto_awesome, color: Colors.white, size: 52),
                     ),
                     const SizedBox(height: 22),
                     Text(
