@@ -2,6 +2,10 @@
 // ignore_for_file: lines_longer_than_80_chars
 
 const extraEn = <String, String>{
+  'choosePhoto': 'Choose a photo',
+  'choosePhotoSub':
+      'Opens your phone\'s photo picker. Only the photo you pick is shared with the app.',
+  'allTools': 'All tools',
   'home': 'Home',
   'edit': 'Edit',
   'collage': 'Collage',

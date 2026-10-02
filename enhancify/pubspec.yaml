@@ -1,7 +1,7 @@
 name: enhancify
 description: Enhancify - AI photo enhancer, AI photos and AI filters.
 publish_to: 'none'
-version: 1.8.3+15
+version: 1.8.4+16
 
 environment:
   sdk: '>=3.6.0 <4.0.0'

@@ -7,15 +7,15 @@ import 'package:share_plus/share_plus.dart';
 
 import '../config/app_config.dart';
 
-/// Gallery access via the **system photo picker**, plus save/share.
-/// Does not use READ_MEDIA_IMAGES / READ_MEDIA_VIDEO (Play photo policy).
+/// System photo picker + save/share. No READ_MEDIA_* (Play photo policy).
 class MediaService {
   MediaService._();
 
   static final ImagePicker _picker = ImagePicker();
 
   // -------------------------------------------------------------- picker
-  /// System photo picker — no READ_MEDIA_* permission on Android 13+.
+  // image_picker opens the Android system photo picker (Android 11+ via
+  // Google Play services). No photo/video permission is needed.
   static Future<File?> pickImage() async {
     final x = await _picker.pickImage(
       source: ImageSource.gallery,

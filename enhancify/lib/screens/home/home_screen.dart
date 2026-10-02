@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -12,7 +10,6 @@ import '../../services/media_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/bottom_banner.dart';
 import '../../widgets/common.dart';
-import '../../widgets/picker_gallery.dart';
 import '../collage/collage_screen.dart';
 import '../enhance/enhance_flow.dart';
 import '../paywall/paywall_screen.dart';
@@ -27,7 +24,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _tool = 'home';
-  final _galleryKey = GlobalKey<PickerGalleryState>();
 
   static const _quickTools = [
     ('beauty', Icons.face_retouching_natural, 'beauty'),
@@ -38,12 +34,10 @@ class _HomeScreenState extends State<HomeScreen> {
     ('music', Icons.music_note, 'photoMusic'),
   ];
 
-  Future<void> _onFile(File file) async {
-    await startPhotoEnhance(context, file, tool: _tool == 'home' ? 'edit' : _tool);
-  }
-
-  Future<void> _pickFromSystem() async {
-    if (_tool == 'collage') {
+  /// Opens the system photo picker (no media permission needed).
+  Future<void> _pickFromSystem([String? tool]) async {
+    final t = tool ?? _tool;
+    if (t == 'collage') {
       final files = await MediaService.pickImages(limit: 6);
       if (files.isEmpty || !mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
@@ -52,7 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ));
       return;
     }
-    await _galleryKey.currentState?.pickOne();
+    final f = await MediaService.pickImage();
+    if (f != null && mounted) {
+      await startPhotoEnhance(context, f, tool: t == 'home' ? 'edit' : t);
+    }
   }
 
   @override
@@ -61,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final tr = context.tr;
     final palette = context.palette;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final bannerPad = state.showAds ? 54.0 : 0.0;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -69,128 +67,140 @@ class _HomeScreenState extends State<HomeScreen> {
         await SystemNavigator.pop();
       },
       child: Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 8, 0),
-              child: Row(
-                children: [
-                  const Text(AppConfig.appName,
-                      style: TextStyle(
-                          fontSize: 26, fontWeight: FontWeight.w900)),
-                  const Spacer(),
-                  if (!state.isPro)
-                    GestureDetector(
-                      onTap: () => openPaywall(context),
-                      child: const ProBadge(),
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.settings_outlined),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-              child: Text(tr('enhance'),
-                  style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Row(
-                children: [
-                  _TabPill(
-                    label: tr('photos'),
-                    selected: true,
-                    onTap: () => _galleryKey.currentState?.pickMore(),
-                  ),
-                  const Spacer(),
-                  IconButton.filledTonal(
-                    style: IconButton.styleFrom(
-                        backgroundColor: palette.surface),
-                    tooltip: tr('browseGallery'),
-                    onPressed: _pickFromSystem,
-                    icon: const Icon(Icons.photo_library_outlined, size: 20),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                children: [
-                  for (final (id, icon, key) in _quickTools)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ChoiceChip(
-                        avatar: Icon(icon, size: 16, color: _tool == id ? Colors.white : AppColors.primary),
-                        label: Text(tr(key)),
-                        selected: _tool == id,
-                        showCheckmark: false,
-                        selectedColor: AppColors.primary,
-                        labelStyle: TextStyle(
-                          color: _tool == id ? Colors.white : palette.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        onSelected: (_) {
-                          setState(() => _tool = _tool == id ? 'home' : id);
-                          if (_tool == id) showSnack(context, tr('pickFor', {'name': tr(key)}));
-                        },
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 8, 0),
+                child: Row(
+                  children: [
+                    const Text(AppConfig.appName,
+                        style: TextStyle(
+                            fontSize: 26, fontWeight: FontWeight.w900)),
+                    const Spacer(),
+                    if (!state.isPro)
+                      GestureDetector(
+                        onTap: () => openPaywall(context),
+                        child: const ProBadge(),
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.settings_outlined),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const SettingsScreen()),
                       ),
                     ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: PickerGallery(
-                      key: _galleryKey,
-                      onOpen: _onFile,
-                      bottomPadding: 84 + bottomInset + (state.showAds ? 54 : 0),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                child: Text(tr('enhance'),
+                    style: const TextStyle(
+                        fontSize: 19, fontWeight: FontWeight.w800)),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Row(
+                  children: [
+                    _TabPill(
+                      label: tr('photos'),
+                      selected: true,
+                      onTap: () => _pickFromSystem(),
                     ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (state.showAds) const Center(child: BottomBannerAd()),
-                        _BottomBar(
-                          bottomInset: bottomInset,
-                          tool: _tool,
-                          onSelect: (tool) {
-                            Navigator.of(context).popUntil((route) => route.isFirst);
-                            if (tool == 'collage') {
-                              Navigator.of(context).push(MaterialPageRoute(
-                                settings: const RouteSettings(name: 'collage'),
-                                builder: (_) => const CollageScreen(),
-                              ));
-                              return;
-                            }
-                            setState(() => _tool = tool);
+                    const Spacer(),
+                    IconButton.filledTonal(
+                      style: IconButton.styleFrom(
+                          backgroundColor: palette.surface),
+                      tooltip: tr('browseGallery'),
+                      onPressed: _pickFromSystem,
+                      icon: const Icon(Icons.photo_library_outlined, size: 20),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 44,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  children: [
+                    for (final (id, icon, key) in _quickTools)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: ChoiceChip(
+                          avatar: Icon(icon,
+                              size: 16,
+                              color: _tool == id
+                                  ? Colors.white
+                                  : AppColors.primary),
+                          label: Text(tr(key)),
+                          selected: _tool == id,
+                          showCheckmark: false,
+                          selectedColor: AppColors.primary,
+                          labelStyle: TextStyle(
+                            color: _tool == id
+                                ? Colors.white
+                                : palette.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          onSelected: (_) {
+                            setState(() => _tool = id);
+                            _pickFromSystem(id);
                           },
                         ),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: _PickerHome(
+                        bottomPadding: 96 + bottomInset + bannerPad,
+                        tool: _tool,
+                        onPick: _pickFromSystem,
+                      ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (state.showAds)
+                            const Center(child: BottomBannerAd()),
+                          _BottomBar(
+                            bottomInset: bottomInset,
+                            tool: _tool,
+                            onSelect: (tool) {
+                              Navigator.of(context)
+                                  .popUntil((route) => route.isFirst);
+                              if (tool == 'collage') {
+                                Navigator.of(context).push(MaterialPageRoute(
+                                  settings:
+                                      const RouteSettings(name: 'collage'),
+                                  builder: (_) => const CollageScreen(),
+                                ));
+                                return;
+                              }
+                              setState(() => _tool = tool);
+                              if (tool != 'home') _pickFromSystem(tool);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -290,13 +300,135 @@ class _BottomBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          item(Icons.home_rounded, context.tr('home'), () => onSelect('home'), active: tool == 'home'),
-          item(Icons.edit_outlined, context.tr('edit'), () => onSelect('edit'), active: tool == 'edit'),
-          item(Icons.auto_fix_high, context.tr('restore'), () => onSelect('restore'), active: tool == 'restore'),
-          item(Icons.grid_view_rounded, context.tr('collage'), () => onSelect('collage'), active: tool == 'collage'),
-          item(Icons.auto_awesome, context.tr('enhance'), () => onSelect('enhance'), active: tool == 'enhance'),
+          item(Icons.home_rounded, context.tr('home'), () => onSelect('home'),
+              active: tool == 'home'),
+          item(Icons.edit_outlined, context.tr('edit'), () => onSelect('edit'),
+              active: tool == 'edit'),
+          item(Icons.auto_fix_high, context.tr('restore'),
+              () => onSelect('restore'),
+              active: tool == 'restore'),
+          item(Icons.grid_view_rounded, context.tr('collage'),
+              () => onSelect('collage'),
+              active: tool == 'collage'),
+          item(Icons.auto_awesome, context.tr('enhance'),
+              () => onSelect('enhance'),
+              active: tool == 'enhance'),
         ],
       ),
+    );
+  }
+}
+
+/// Home without a gallery grid: a big "Choose a photo" card and tool tiles.
+/// Every tile opens the system photo picker, so the app never needs
+/// READ_MEDIA_IMAGES / READ_MEDIA_VIDEO.
+class _PickerHome extends StatelessWidget {
+  const _PickerHome(
+      {required this.bottomPadding, required this.tool, required this.onPick});
+
+  final double bottomPadding;
+  final String tool;
+  final void Function([String? tool]) onPick;
+
+  static const _tiles = [
+    ('enhance', Icons.auto_awesome, 'enhance'),
+    ('edit', Icons.edit_outlined, 'edit'),
+    ('restore', Icons.auto_fix_high, 'restore'),
+    ('beauty', Icons.face_retouching_natural, 'beauty'),
+    ('bg', Icons.wallpaper, 'changeBg'),
+    ('remove', Icons.cleaning_services, 'removeObject'),
+    ('collage', Icons.grid_view_rounded, 'collage'),
+    ('passport', Icons.badge_outlined, 'passport'),
+    ('gif', Icons.gif_box, 'makeGif'),
+    ('music', Icons.music_note, 'photoMusic'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final tr = context.tr;
+    final palette = context.palette;
+    return ListView(
+      padding: EdgeInsets.fromLTRB(16, 4, 16, bottomPadding),
+      children: [
+        Material(
+          borderRadius: BorderRadius.circular(24),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => onPick(),
+            child: Ink(
+              decoration:
+                  const BoxDecoration(gradient: AppColors.brandGradient),
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white24,
+                    child: Icon(Icons.add_photo_alternate_outlined,
+                        color: Colors.white, size: 32),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(tr('choosePhoto'),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 4),
+                        Text(tr('choosePhotoSub'),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12.5)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Text(tr('allTools'),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 10),
+        GridView.count(
+          crossAxisCount: 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 1.05,
+          children: [
+            for (final (id, icon, key) in _tiles)
+              Material(
+                color: tool == id ? AppColors.blush : palette.surface,
+                borderRadius: BorderRadius.circular(18),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () => onPick(id),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(icon, color: AppColors.primary, size: 28),
+                        const SizedBox(height: 8),
+                        Text(tr(key),
+                            maxLines: 2,
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 12.5, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

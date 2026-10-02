@@ -22,7 +22,7 @@ class AppConfig {
   /// No separate Terms page is published yet — Privacy Policy covers use.
   static const String termsUrl = privacyUrl;
   static const String helpCenterUrl = privacyUrl;
-  static const String appVersionLabel = '1.8.3';
+  static const String appVersionLabel = '1.8.4';
   static const String instagramUrl = 'https://instagram.com/';
   static const String facebookUrl = 'https://facebook.com/';
   static const String tiktokUrl = 'https://tiktok.com/';
