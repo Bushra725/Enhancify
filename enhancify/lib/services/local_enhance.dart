@@ -133,7 +133,7 @@ class LocalEnhance {
     if (watermark) drawWatermark(image);
     if (!meme && text.trim().isNotEmpty) _drawLabel(image, text.trim(), bottom: false);
     if (sticker.isNotEmpty) _drawLabel(image, sticker, bottom: false, yFraction: 0.18);
-    return img.encodeJpg(image, quality: 92);
+    return img.encodeJpg(image, quality: 100);
   }
 
   /// Same edit as [bake], on a background isolate so the UI stays responsive.
@@ -618,7 +618,7 @@ class LocalEnhance {
       source,
       width: (source.width * scale).round(),
       height: (source.height * scale).round(),
-      interpolation: img.Interpolation.linear,
+      interpolation: img.Interpolation.cubic,
     );
   }
 

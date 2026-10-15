@@ -76,6 +76,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   bool _busy = false;
   bool _rendering = false;
   bool _renderAgain = false;
+  bool _allowLeave = false;
+  bool _askingLeave = false;
   String? _error;
 
   final Map<String, double> _values = {};
@@ -175,14 +177,16 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
     super.dispose();
   }
 
-  /// Width / height of an encoded image, read from its header.
+  /// Width / height after the camera's rotation is applied, so the photo
+  /// is not stretched when it opens.
   static Future<double?> _aspectOf(Uint8List bytes) async {
     try {
-      final buf = await ui.ImmutableBuffer.fromUint8List(bytes);
-      final desc = await ui.ImageDescriptor.encoded(buf);
-      final w = desc.width, h = desc.height;
-      desc.dispose();
-      buf.dispose();
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 48);
+      final frame = await codec.getNextFrame();
+      final w = frame.image.width.toDouble();
+      final h = frame.image.height.toDouble();
+      frame.image.dispose();
+      codec.dispose();
       return w > 0 && h > 0 ? w / h : null;
     } catch (_) {
       return null;
@@ -204,10 +208,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
       });
       if (widget.tool == 'crop' || widget.tool == 'rotate') {
         await _openCrop(rotate: widget.tool == 'rotate');
-        return;
       }
-      if (widget.tool == 'edit') return;
-      await _render();
     } catch (_) {
       if (mounted) setState(() => _error = 'Could not open this photo.');
     }
@@ -235,8 +236,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
     }
   }
 
-  /// Bakes the current edit. [maxSide] 900 for the preview, larger to save.
-  Future<List<int>> _bakeWith(Uint8List src, {int maxSide = 900, bool? watermark}) {
+  /// Bakes the current edit. The long side stays at the original size
+  /// unless a caller passes a smaller [maxSide].
+  Future<List<int>> _bakeWith(Uint8List src, {int maxSide = 8192, bool? watermark}) {
     final box = _cropBox;
     final pro = context.read<AppState>().isPro;
     return _engine.bakeOffUi(
@@ -282,7 +284,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
         final current = _original;
         if (current == null) break;
         final snapshot = Map<String, double>.of(_values);
-        final bytes = await _bakeWith(current, watermark: false);
+        final bytes = await _bakeWith(current, maxSide: 8192, watermark: false);
         if (!mounted) return;
         if (_renderAgain) continue;
         final out = Uint8List.fromList(bytes);
@@ -313,9 +315,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
     return out;
   }
 
-  /// Renders the finished photo at full resolution (up to [maxSide] px).
+  /// Renders the finished photo at the original resolution (up to [maxSide] px).
   /// Text, stickers and drawings are rendered on top at the same resolution.
-  Future<File?> _renderFinal({int maxSide = 3072}) async {
+  Future<File?> _renderFinal({int maxSide = 8192}) async {
     final src = _original;
     if (src == null) return null;
     final full = Uint8List.fromList(await _bakeWith(src, maxSide: maxSide));
@@ -680,17 +682,100 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
     _overlay.setDrawing(id == 'draw');
   }
 
+  bool get _hasEdits {
+    if (_allowLeave) return false;
+    if (_history.isNotEmpty || _mask.isNotEmpty || _overlay.hasContent) return true;
+    if (_turns != 0 || _crop != 'free' || _filter != 'none' || _frame != 'none' || _meme) {
+      return true;
+    }
+    if (_watermark != true) return true;
+    if (widget.tool == 'enhance') {
+      if (_look != 'enhance') return true;
+    } else if (widget.tool == 'restore') {
+      if (_look != 'restore') return true;
+    } else if (_look != 'none') {
+      return true;
+    }
+    for (final a in _adjustments) {
+      if ((_v(a.id) - a.neutral).abs() > 0.001) return true;
+    }
+    return false;
+  }
+
+  Future<void> _requestLeave() async {
+    if (_askingLeave) return;
+    if (!_hasEdits) {
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      return;
+    }
+    _askingLeave = true;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(context.tr('savePhoto'),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              Text(context.tr('unsavedEdits'),
+                  style: TextStyle(color: context.palette.textSecondary)),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, 'discard'),
+                      child: Text(context.tr('discard')),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                      onPressed: () => Navigator.pop(ctx, 'save'),
+                      child: Text(context.tr('save')),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    _askingLeave = false;
+    if (!mounted || choice == null) return;
+    if (choice == 'save') {
+      await _done();
+      return;
+    }
+    setState(() => _allowLeave = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    });
+  }
+
   // ------------------------------------------------------------------ UI
   @override
   Widget build(BuildContext context) {
     final preview = _preview;
     final palette = context.palette;
-    return Scaffold(
+    final grain = _v('grain');
+    return PopScope(
+      canPop: !_hasEdits,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _requestLeave();
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(_screenTitle),
         leading: IconButton(
           icon: const Icon(Icons.home_outlined),
-          onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+          onPressed: _requestLeave,
         ),
         actions: [
           IconButton(onPressed: _history.isEmpty ? null : _undo, icon: const Icon(Icons.undo)),
@@ -726,12 +811,15 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                               EditorStage(
                                 controller: _overlay,
                                 boundaryKey: _stageKey,
-                                child: ColorFiltered(
-                                  colorFilter: ColorFilter.matrix(_previewMatrix()),
-                                  child: Image.memory(preview,
-                                      fit: BoxFit.fill, gaplessPlayback: true),
-                                ),
+                                child: _photoView(preview),
                               ),
+                              if (grain > 0.4)
+                                IgnorePointer(
+                                  child: Opacity(
+                                    opacity: (grain / 36).clamp(0.0, 0.55),
+                                    child: const CustomPaint(painter: _GrainPainter()),
+                                  ),
+                                ),
                               if (_watermark)
                                 const Positioned(
                                   right: 10,
@@ -805,6 +893,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -1281,44 +1370,136 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   double _b(String id) =>
       _baked[id] ?? _adjustments.firstWhere((a) => a.id == id).neutral;
 
-  /// Instant preview while a slider moves (the exact result is baked on
-  /// release). Mirrors LocalEnhance._grade and only applies the change since
-  /// the last bake, so nothing is applied twice.
+  /// Live color grade. The picture updates on the same frame as the slider.
+  /// The exact pixels are written only when the photo is saved.
   List<double> _previewMatrix() {
-    double ratio(String id) {
-      final b = _b(id);
-      return b.abs() < 1e-3 ? 1.0 : _v(id) / b;
-    }
+    double contrastOf(double contrast, double fade) => contrast * (1 - fade * 0.35);
+    double brightOf(double brightness, double lightness, double fade) =>
+        brightness * (1 + lightness * 0.35) + fade * 0.08;
 
-    final c = ratio('contrast');
-    final s = ratio('saturation') *
-        (1 + 0.45 * _v('vibrance')) /
-        (1 + 0.45 * _b('vibrance'));
-    final gain = ratio('brightness') *
-        (1 + 0.35 * _v('lightness')) /
-        (1 + 0.35 * _b('lightness')) *
-        math
-            .pow(2, (_v('exposure') - _b('exposure')) +
-                0.55 * (_v('highlight') - _b('highlight')))
-            .toDouble();
+    final cLive = contrastOf(_v('contrast'), _v('fade'));
+    final cBase = contrastOf(_b('contrast'), _b('fade'));
+    final c = cBase.abs() < 1e-3 ? 1.0 : cLive / cBase;
+    final sLive = _v('saturation') * (1 + 0.45 * _v('vibrance'));
+    final sBase = _b('saturation') * (1 + 0.45 * _b('vibrance'));
+    final s = sBase.abs() < 1e-3 ? 1.0 : (sLive < 0 ? 0 : sLive) / (sBase < 0 ? 0.001 : sBase);
+    final bLive = brightOf(_v('brightness'), _v('lightness'), _v('fade'));
+    final bBase = brightOf(_b('brightness'), _b('lightness'), _b('fade'));
+    final gain = (bBase.abs() < 1e-3 ? 1.0 : bLive / bBase) *
+        math.pow(2, (_v('exposure') - _b('exposure')) + 0.55 * (_v('highlight') - _b('highlight'))).toDouble();
     final k = c * gain;
     final pivot = 127.5 * (1 - c) * gain;
-    final warm = (_v('warmth') - _b('warmth')) * 30;
     const lumR = 0.213, lumG = 0.715, lumB = 0.072;
     final sr = (1 - s) * lumR;
     final sg = (1 - s) * lumG;
     final sb = (1 - s) * lumB;
-    return <double>[
-      (sr + s) * k, sg * k, sb * k, 0, pivot + warm,
+    final graded = <double>[
+      (sr + s) * k, sg * k, sb * k, 0, pivot,
       sr * k, (sg + s) * k, sb * k, 0, pivot,
-      sr * k, sg * k, (sb + s) * k, 0, pivot - warm,
+      sr * k, sg * k, (sb + s) * k, 0, pivot,
       0, 0, 0, 1, 0,
     ];
+    final hue = _v('tint') - _b('tint');
+    final tinted = hue.abs() < 0.01 ? graded : _mul(_hueMatrix(hue), graded);
+    final warm = (_v('warmth') - _b('warmth')) * 30;
+    tinted[4] += warm;
+    tinted[14] -= warm;
+    return tinted;
+  }
+
+  /// Draws the original file at the screen's pixel size. The full photo
+  /// stays untouched until an adjustment is baked.
+  Widget _photoView(Uint8List preview) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final dpr = MediaQuery.devicePixelRatioOf(context);
+        final targetW = (constraints.maxWidth * dpr).round().clamp(1, 4096);
+        Widget image = Image(
+          image: ResizeImage(MemoryImage(preview), width: targetW),
+          fit: BoxFit.fill,
+          filterQuality: FilterQuality.medium,
+          gaplessPlayback: true,
+        );
+        final matrix = _previewMatrix();
+        if (!_sameMatrix(matrix)) {
+          image = ColorFiltered(colorFilter: ColorFilter.matrix(matrix), child: image);
+        }
+        return image;
+      },
+    );
+  }
+
+  bool _sameMatrix(List<double> m) {
+    const id = <double>[
+      1, 0, 0, 0, 0,
+      0, 1, 0, 0, 0,
+      0, 0, 1, 0, 0,
+      0, 0, 0, 1, 0,
+    ];
+    for (var i = 0; i < id.length; i++) {
+      if ((m[i] - id[i]).abs() > 0.001) return false;
+    }
+    return true;
+  }
+
+  List<double> _hueMatrix(double degrees) {
+    final hue = degrees * math.pi / 180;
+    final s = math.sin(hue);
+    final c = math.cos(hue);
+    final hueR = (2 * c) / 3;
+    final hueG = (-math.sqrt(3) * s - c) / 3;
+    final hueB = (math.sqrt(3) * s - c + 1) / 3;
+    return <double>[
+      hueR, hueG, hueB, 0, 0,
+      hueB, hueR, hueG, 0, 0,
+      hueG, hueB, hueR, 0, 0,
+      0, 0, 0, 1, 0,
+    ];
+  }
+
+  /// [a] is applied after [b].
+  List<double> _mul(List<double> a, List<double> b) {
+    double at(int r, int c) {
+      if (c == 4) {
+        return a[r * 5] * b[4] +
+            a[r * 5 + 1] * b[9] +
+            a[r * 5 + 2] * b[14] +
+            a[r * 5 + 3] * b[19] +
+            a[r * 5 + 4];
+      }
+      return a[r * 5] * b[c] +
+          a[r * 5 + 1] * b[5 + c] +
+          a[r * 5 + 2] * b[10 + c] +
+          a[r * 5 + 3] * b[15 + c];
+    }
+
+    return [for (var r = 0; r < 4; r++) for (var c = 0; c < 5; c++) at(r, c)];
   }
 
   Widget _action(String label, VoidCallback onTap) {
     return ActionChip(label: Text(label), onPressed: _busy ? null : onTap);
   }
+}
+
+class _GrainPainter extends CustomPainter {
+  const _GrainPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final dark = Paint()..color = const Color(0xFF000000);
+    final light = Paint()..color = const Color(0xFFFFFFFF);
+    const step = 5.0;
+    for (var y = 0.0; y < size.height; y += step) {
+      for (var x = 0.0; x < size.width; x += step) {
+        final n = (x.toInt() * 73856093 ^ y.toInt() * 19349663) & 255;
+        if (n > 90) continue;
+        canvas.drawRect(Rect.fromLTWH(x, y, 1.4, 1.4), n.isEven ? dark : light);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Owns its text fields until the route is gone, so Add does not dispose them mid-animation.

@@ -17,6 +17,8 @@ class AdsService {
   bool _initialized = false;
   InterstitialAd? _interstitial;
   RewardedAd? _rewarded;
+  AppOpenAd? _appOpen;
+  bool _showingAppOpen = false;
 
   bool get _supported => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
@@ -28,14 +30,21 @@ class AdsService {
   Future<void> init() async {
     if (!_supported || !AppConfig.adsEnabled || _initialized) return;
     try {
+      // Without this, brand-new AdMob units often return "no fill" (error 3)
+      // on a debug/unpublished build. This phone still uses YOUR unit ids.
       await MobileAds.instance.updateRequestConfiguration(
-        RequestConfiguration(testDeviceIds: const []),
+        RequestConfiguration(
+          testDeviceIds: const [
+            '1B5C6FC753A164B061651D9B83735417',
+          ],
+        ),
       );
       await MobileAds.instance.initialize();
       _initialized = true;
       if (_state.showAds) {
         _loadInterstitial();
         _loadRewarded();
+        _loadAppOpen();
       }
     } catch (e) {
       debugPrint('Ads init failed: $e');
@@ -59,6 +68,12 @@ class AdsService {
           debugPrint('Interstitial failed to load: $err');
           _interstitial = null;
           if (done != null && !done.isCompleted) done.complete();
+          // Retry once — new units often miss the first request.
+          Future<void>.delayed(const Duration(seconds: 12), () {
+            if (_initialized && _state.showAds && _interstitial == null) {
+              _loadInterstitial();
+            }
+          });
         },
       ),
     );
@@ -116,6 +131,65 @@ class AdsService {
     await ad.show();
     await closed.future;
     _loadInterstitial();
+  }
+
+  void _loadAppOpen() {
+    if (!_initialized || AppConfig.appOpenAdUnitId.isEmpty) return;
+    AppOpenAd.load(
+      adUnitId: AppConfig.appOpenAdUnitId,
+      request: request,
+      adLoadCallback: AppOpenAdLoadCallback(
+        onAdLoaded: (ad) => _appOpen = ad,
+        onAdFailedToLoad: (err) {
+          debugPrint('App open failed to load: $err');
+          _appOpen = null;
+        },
+      ),
+    );
+  }
+
+  /// Cold-start full-screen ad for free users. Safe to call more than once.
+  Future<void> showAppOpen() async {
+    if (!_state.showAds || _showingAppOpen) return;
+    await _ensureReady();
+    if (!_initialized) return;
+    if (_appOpen == null) {
+      final c = Completer<void>();
+      AppOpenAd.load(
+        adUnitId: AppConfig.appOpenAdUnitId,
+        request: request,
+        adLoadCallback: AppOpenAdLoadCallback(
+          onAdLoaded: (ad) {
+            _appOpen = ad;
+            if (!c.isCompleted) c.complete();
+          },
+          onAdFailedToLoad: (_) {
+            if (!c.isCompleted) c.complete();
+          },
+        ),
+      );
+      await c.future.timeout(const Duration(seconds: 6), onTimeout: () {});
+    }
+    final ad = _appOpen;
+    if (ad == null) return;
+    _appOpen = null;
+    _showingAppOpen = true;
+    final closed = Completer<void>();
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (a) {
+        a.dispose();
+        _showingAppOpen = false;
+        if (!closed.isCompleted) closed.complete();
+      },
+      onAdFailedToShowFullScreenContent: (a, e) {
+        a.dispose();
+        _showingAppOpen = false;
+        if (!closed.isCompleted) closed.complete();
+      },
+    );
+    await ad.show();
+    await closed.future;
+    _loadAppOpen();
   }
 
   /// Shows a rewarded ad. Returns true if the reward was earned — or if ads

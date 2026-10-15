@@ -495,7 +495,7 @@ class _CollageScreenState extends State<CollageScreen> {
       return Stack(
         clipBehavior: Clip.hardEdge,
         children: [
-          Positioned.fill(child: _background(bgColor, w)),
+          Positioned.fill(child: _background(bgColor, Size(w, h))),
           Positioned.fill(
             child: IgnorePointer(
               child: CustomPaint(
@@ -515,7 +515,8 @@ class _CollageScreenState extends State<CollageScreen> {
     });
   }
 
-  Widget _background(Color color, double boardW) {
+  Widget _background(Color color, Size board) {
+    final boardW = board.width;
     switch (_t.bg) {
       case BgKind.paper:
         return CustomPaint(painter: PaperPainter(color));
@@ -536,26 +537,20 @@ class _CollageScreenState extends State<CollageScreen> {
         );
       case BgKind.photo:
         final src = _slots.isNotEmpty ? _slots.first : null;
+        if (src == null) {
+          return GestureDetector(
+            onTap: () => _pickInto(0),
+            child: Container(
+              color: color == Colors.white ? AppColors.blush : color,
+              alignment: Alignment.topLeft,
+              padding: const EdgeInsets.all(10),
+              child: const _AddHint(label: 'Tap to add background photo'),
+            ),
+          );
+        }
         return GestureDetector(
-          onTap: () => src == null ? _pickInto(0) : _slotMenu(0),
-          child: src == null
-              ? Container(
-                  color: color == Colors.white ? AppColors.blush : color,
-                  alignment: Alignment.topLeft,
-                  padding: const EdgeInsets.all(10),
-                  child: const _AddHint(label: 'Tap to add background photo'),
-                )
-              : InteractiveViewer(
-                  transformationController: _zoom[0],
-                  minScale: 1,
-                  maxScale: 5,
-                  child: SizedBox.expand(
-                    child: Image.memory(src,
-                        fit: BoxFit.cover,
-                        gaplessPlayback: true,
-                        cacheWidth: (boardW * 4).round().clamp(600, 2600)),
-                  ),
-                ),
+          onLongPress: () => _slotMenu(0),
+          child: _movablePhoto(src, 0, board),
         );
       case BgKind.color:
         return ColoredBox(color: color);
@@ -593,17 +588,7 @@ class _CollageScreenState extends State<CollageScreen> {
             alignment: Alignment.center,
             child: const _AddHint(label: 'Add'),
           )
-        : InteractiveViewer(
-            transformationController: _zoom[slot],
-            minScale: 1,
-            maxScale: 5,
-            child: SizedBox.expand(
-              child: Image.memory(bytes,
-                  fit: BoxFit.cover,
-                  gaplessPlayback: true,
-                  cacheWidth: (size.width * 6).round().clamp(300, 2400)),
-            ),
-          );
+        : _movablePhoto(bytes, slot, size);
 
     Widget body;
     switch (f.style) {
@@ -664,10 +649,43 @@ class _CollageScreenState extends State<CollageScreen> {
           ],
         );
     }
+    // Empty slots: tap to add. Filled slots: drag/pinch to adjust, long-press for the menu.
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => bytes == null ? _pickInto(slot) : _slotMenu(slot),
+      onTap: bytes == null ? () => _pickInto(slot) : null,
+      onLongPress: bytes != null ? () => _slotMenu(slot) : null,
       child: body,
+    );
+  }
+
+  /// Full photo fits inside the frame (nothing cropped). Pinch to zoom, then
+  /// drag to move if the user wants a closer crop.
+  Widget _movablePhoto(Uint8List bytes, int slot, Size size) {
+    while (_zoom.length <= slot) {
+      _zoom.add(TransformationController());
+    }
+    final w = math.max(size.width, 1.0);
+    final h = math.max(size.height, 1.0);
+    return ColoredBox(
+      color: const Color(0xFFFFF0F6),
+      child: InteractiveViewer(
+        transformationController: _zoom[slot],
+        minScale: 1,
+        maxScale: 4,
+        panEnabled: true,
+        scaleEnabled: true,
+        child: SizedBox(
+          width: w,
+          height: h,
+          child: Image.memory(
+            bytes,
+            fit: BoxFit.contain,
+            alignment: Alignment.center,
+            gaplessPlayback: true,
+            cacheWidth: (w * 3).round().clamp(400, 2800),
+          ),
+        ),
+      ),
     );
   }
 }

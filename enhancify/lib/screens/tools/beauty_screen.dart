@@ -51,9 +51,9 @@ class _BeautyScreenState extends State<BeautyScreen> {
   String? _error;
   bool _busy = false;
   bool _compare = false;
-  String _preset = 'Natural';
+  String _preset = 'Off';
   String _feature = 'smooth';
-  BeautySettings _s = BeautySettings.presets['Natural']!.copy();
+  BeautySettings _s = BeautySettings();
   Timer? _debounce;
   int _job = 0;
 
@@ -76,12 +76,13 @@ class _BeautyScreenState extends State<BeautyScreen> {
       setState(() {
         _jpg = jpg;
         _faces = faces;
+        _preview = jpg;
       });
       if (faces.isEmpty) {
         setState(() => _error = 'No face found. Try a clear, front-facing photo.');
         return;
       }
-      _render();
+      // Keep Smooth and every other control at zero until the user moves one.
     } catch (_) {
       if (mounted) setState(() => _error = 'Could not read this photo.');
     }
@@ -95,6 +96,10 @@ class _BeautyScreenState extends State<BeautyScreen> {
   Future<void> _render() async {
     final jpg = _jpg;
     if (jpg == null || _faces.isEmpty) return;
+    if (_s.isNeutral) {
+      if (mounted) setState(() => _preview = jpg);
+      return;
+    }
     final job = ++_job;
     setState(() => _busy = true);
     try {

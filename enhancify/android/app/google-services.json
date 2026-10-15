@@ -1,28 +1,29 @@
 {
   "project_info": {
-    "project_number": "555344126006",
-    "project_id": "enhancify-15bd7",
-    "storage_bucket": "enhancify-15bd7.firebasestorage.app"
+    "project_number": "153148853123",
+    "project_id": "photo-editing-app-a00e1",
+    "storage_bucket": "photo-editing-app-a00e1.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:555344126006:android:baa5605c20bd47ecb83897",
+        "mobilesdk_app_id": "1:153148853123:android:c04002bae3ae2ca99104b6",
         "android_client_info": {
-          "package_name": "com.theoccess.enhancify"
+          "package_name": "com.mai.photo.editor.app.picture.face.art.lab"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAxkHuW3YXReMmLZ5oDo2_-58am2a3yK1w"
+          "current_key": "AIzaSyD3DpvAEqFJopYA1i_snUI6Zo4QvAxF_mQ"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": []
         }
-      }
+      },
+      "admob_app_id": "ca-app-pub-9297250663056879~7232608900"
     }
   ],
   "configuration_version": "1"

@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' show Offset;
 
-import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 
 import '../config/app_config.dart';
@@ -80,28 +79,6 @@ Future<Uint8List> removeMarkedWithAi(Uint8List photo, List<MaskOp> ops) async {
     'perspective. Do not change anything else in the photo. No magenta.',
   );
   return Isolate.run(() => _pasteBack(jpg, maskPng, ai));
-}
-
-const _channel = MethodChannel('enhancify/inpaint');
-
-/// Classical OpenCV inpainting on Android. [telea] uses Telea; otherwise
-/// Navier-Stokes. White pixels in [maskPng] are removed.
-Future<Uint8List> removeObject(
-  Uint8List photo,
-  Uint8List maskPng, {
-  bool telea = true,
-  double radius = 4,
-}) async {
-  final bytes = await _channel.invokeMethod<Uint8List>('removeObject', {
-    'photo': photo,
-    'mask': maskPng,
-    'telea': telea,
-    'radius': radius,
-  });
-  if (bytes == null || bytes.isEmpty) {
-    throw StateError('Inpaint did not return an image.');
-  }
-  return bytes;
 }
 
 /// Builds a black mask with white marks (brush and lasso), erase subtracts.

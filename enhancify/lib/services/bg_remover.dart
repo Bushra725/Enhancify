@@ -4,8 +4,6 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' show Offset;
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
 import 'package:image/image.dart' as img;
 
@@ -35,12 +33,10 @@ class RefineStroke {
   final List<Offset> points;
 }
 
-/// Background remover in the style of Canva: people via ML Kit selfie
-/// segmentation, objects via GrabCut (Android) or a color model (iOS).
+/// Background remover: people via ML Kit selfie segmentation, other subjects
+/// via an on-device color model (no OpenCV — keeps the Play download small).
 class BgRemover {
   BgRemover._();
-
-  static const _channel = MethodChannel('enhancify/inpaint');
 
   static Future<BgCutout> cutout(Uint8List bytes) async {
     final prepared = await Isolate.run(() => _upright(bytes));
@@ -77,21 +73,9 @@ class BgRemover {
       }
     }
 
-    // 2) Objects on Android: OpenCV GrabCut.
-    if (!kIsWeb && Platform.isAndroid) {
-      try {
-        final png = await _channel.invokeMethod<Uint8List>('grabCut', {'photo': jpg});
-        if (png != null && png.isNotEmpty) {
-          return BgCutout(photo: jpg, width: w, height: h, maskPng: png, method: 'object');
-        }
-      } on MissingPluginException {
-        // fall through
-      } on PlatformException {
-        // fall through
-      }
-    }
-
-    // 3) Everywhere else: color model (border = background).
+    // 2) Non-person subjects: color model (border = background).
+    // OpenCV GrabCut was removed to shrink the Play download; quality for
+    // people still uses ML Kit selfie segmentation above.
     final mask = await Isolate.run(() => _colorMask(jpg));
     return BgCutout(photo: jpg, width: w, height: h, maskPng: mask, method: 'color');
   }
