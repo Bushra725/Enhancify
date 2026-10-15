@@ -18,10 +18,6 @@
 -keep class com.google.mlkit.** { *; }
 -dontwarn com.google.mlkit.**
 
-# OpenCV
--keep class org.opencv.** { *; }
--dontwarn org.opencv.**
-
 # WorkManager (previous shrink crash)
 -keep class androidx.work.** { *; }
 -keep class androidx.work.impl.** { *; }

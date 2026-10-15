@@ -22,14 +22,18 @@ class AppConfig {
   /// No separate Terms page is published yet — Privacy Policy covers use.
   static const String termsUrl = privacyUrl;
   static const String helpCenterUrl = privacyUrl;
-  static const String appVersionLabel = '1.8.4';
+  static const String appVersionLabel = '1.8.7';
   static const String instagramUrl = 'https://instagram.com/';
   static const String facebookUrl = 'https://facebook.com/';
   static const String tiktokUrl = 'https://tiktok.com/';
   static const String androidPackage =
       'com.mai.photo.editor.app.picture.face.art.lab';
+  /// Same App Store bundle id as Android applicationId (register in Apple Developer).
+  static const String iosBundleId =
+      'com.mai.photo.editor.app.picture.face.art.lab';
   static const String playStoreUrl =
       'https://play.google.com/store/apps/details?id=$androidPackage';
+  /// Replace id0000000000 with your App Store Connect numeric app id after create.
   static const String appStoreUrl = 'https://apps.apple.com/app/id0000000000';
 
   // ---------------------------------------------------- FREE AI (default)

@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>enhancify</string>
+	<string>Enhancify</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -66,23 +66,42 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Photos: system PHPicker for choose; save uses add-only permission. -->
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Enhancify needs access to your photos and videos so you can choose media to enhance, edit, restore, collage, and save improved results. Media stays on your device unless you use an optional cloud AI feature.</string>
+	<string>Enhancify opens the system photo picker so you can choose a photo or video to enhance or edit. It does not need full library access.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Enhancify saves your enhanced photos and videos into your library so you can keep and share them.</string>
-	<key>NSAppleMusicUsageDescription</key>
-	<string>Enhancify lets you pick a song from your library to add to a photo video.</string>
+	<string>Enhancify saves your enhanced photos and videos to your library so you can keep and share them.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Enhancify uses the camera only when you choose to take a new photo to enhance or edit.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Enhancify lets you pick a song from your library to add to a photo video.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Enhancify may use the microphone only if you record a video with sound inside the app.</string>
 	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
 	<true/>
+	<!-- Production AdMob app id (Mob Apps Inc). Create an iOS app in AdMob if you need a separate iOS app id. -->
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-9297250663056879~7232608900</string>
 	<key>LSApplicationQueriesSchemes</key>
-	<array><string>https</string><string>mailto</string></array>
+	<array>
+		<string>https</string>
+		<string>mailto</string>
+		<string>instagram</string>
+		<string>whatsapp</string>
+		<string>fb</string>
+		<string>tiktok</string>
+		<string>snapchat</string>
+	</array>
+	<!-- Minimal Google SKAdNetwork entry; expand from AdMob docs before heavy ad rollout. -->
 	<key>SKAdNetworkItems</key>
-	<array><dict><key>SKAdNetworkIdentifier</key><string>cstr6suwn9.skadnetwork</string></dict></array>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+	</array>
+	<!-- App Store export compliance: no custom encryption beyond HTTPS. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

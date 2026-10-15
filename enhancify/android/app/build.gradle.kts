@@ -31,8 +31,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // Do NOT set ndk.abiFilters — Play App Bundles deliver per-ABI splits.
-        // Filtering to ARM-only dropped ~1k devices vs the prior release.
+        // Phones/tablets are ARM. Skipping x86/x86_64 cuts a large emulator-only
+        // native payload from the bundle (OpenCV alone was ~50 MB on x86_64).
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
         // Keep dependency language packs aligned with in-app languages.
         resourceConfigurations += listOf(
             "en", "ur", "ar", "es", "hi", "fr",
@@ -73,8 +76,9 @@ android {
     packaging {
         jniLibs {
             pickFirsts += "**/libc++_shared.so"
-            // Compress .so in delivered APKs — smaller Play downloads (OpenCV is large).
+            // Compress .so in delivered APKs — smaller Play downloads.
             useLegacyPackaging = true
+            excludes += setOf("**/x86/**", "**/x86_64/**")
         }
     }
 }
@@ -92,6 +96,7 @@ flutter {
 dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
     implementation("com.google.firebase:firebase-analytics")
-    implementation("org.opencv:opencv:4.9.0")
+    // OpenCV removed (~19–50 MB per ABI). Object remove + BG fallback use
+    // on-device Dart algorithms so photo export quality stays high.
     implementation("androidx.core:core-ktx:1.13.1")
 }
